@@ -2,6 +2,8 @@ import sys
 import os
 import yaml
 import subprocess
+from flask import Flask, render_template
+from threading import Thread
 
 
 class Artemis(object):
@@ -42,6 +44,20 @@ class Artemis(object):
 
     def teardown_environment(self, env):
         print self.__kubectl("delete namespace %s" % env.get_name())
+
+    def update_component(self, env_name, comp_name, image_tag):
+        env = self.get_environment(env_name)
+        comp = env.get_component(comp_name)
+        comp.set_image_tag(image_tag)
+        self.__kubectl("--namespace=%s rolling-update %s --image=%s" % (env.get_name(),
+                                                                      comp.get_name(),
+                                                                      comp.get_image_name()))
+
+    def get_component_uptime(self, env_name, component_name):
+        return self.__kubectl("--namespace=%s get po --selector=app=%s|tail -n1|awk '{ print $5}'" % (env_name, component_name))
+
+    def get_component_pod_name(self, env_name, component_name):
+        return self.__kubectl("--namespace=%s get po --selector=app=%s|tail -n1|awk '{ print $1}'" % (env_name, component_name))
 
     def __get_environment_list(self):
         return [Environment(i, self.__read_env_version(i))
@@ -107,6 +123,12 @@ class Artemis(object):
             print "Tag for %s in %s: %s" % (comp.get_name(),
                                             env.get_name(),
                                             comp.get_image_tag())
+        if sys.argv[1] == 'get-image-name':
+            env = self.get_environment(sys.argv[2])
+            comp = env.get_component(sys.argv[3])
+            print "Name for %s in %s: %s" % (comp.get_name(),
+                                            env.get_name(),
+                                            comp.get_image_name())
 
         if sys.argv[1] == 'set-image-tag':
             env = self.get_environment(sys.argv[2])
@@ -141,8 +163,11 @@ class Environment(object):
             if c.get_name() == name:
                 return c
 
-    def get_components(self):
-        return self.components
+    def get_components(self, resource_type=''):
+        if not resource_type:
+            return self.components
+        else:
+            return [c for c in self.components if c.get_type() == resource_type]
 
     def __make_spec(self):
         print "Copying environment spec from %s" % self.__get_skel_dir()
@@ -211,7 +236,16 @@ class Component(object):
         self.__write_spec(spec)
 
     def get_image_tag(self):
-        return self.get_image_name().split(":")[1]
+        try:
+            return self.get_image_name().split(":")[1]
+        except:
+            return ""
+
+    def get_image_basename(self):
+        try:
+            return self.get_image_name().split(":")[0]
+        except:
+            return ""
 
     def get_image_name(self):
         if self.type != 'kube':
@@ -244,6 +278,40 @@ class Component(object):
         return self.name + " [" + self.type + "]: " + self.file
 
 
+def async(f):
+    def wrapper(*args, **kwargs):
+        thr = Thread(target=f, args=args, kwargs=kwargs)
+        thr.start()
+    return wrapper
+
+
 if __name__ == '__main__':
     tool = Artemis(config_file='config.yml')
-    tool.run_cli()
+    if len(sys.argv) == 2 and sys.argv[1] == 'server':
+        ui = Flask("artemis")
+        ui.config.update(
+            DEBUG=True,
+            SECRET_KEY='abc'
+        )
+        @async
+        def call_image_update(env_name, component_name, image_tag):
+            tool.update_component(env_name, component_name, image_tag)
+
+        @ui.route('/')
+        def list_environments():
+            return render_template("list_environments.html", envs=tool.get_environments())
+
+        @ui.route('/env/<env>')
+        def show_environment(env):
+            return render_template("show_environment.html", env=tool.get_environment(env), tool=tool)
+
+        @ui.route('/update/<env_name>/<component_name>/<image_tag>')
+        def update_image(env_name, component_name, image_tag):
+            call_image_update(env_name, component_name, image_tag)
+            return "Request processing"
+
+        ui.run()
+    else:
+        tool.run_cli()
+
+    

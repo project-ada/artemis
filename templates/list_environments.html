@@ -1,0 +1,11 @@
+<html>
+<head>
+<title>Artemis</title>
+</head>
+<body>
+<h1>Environments</h1>
+{% for e in envs %}
+<li><a href="/env/{{ e.get_name() }}">{{ e.get_name() }}</a></li>
+{% endfor %}
+</body>
+</html>
