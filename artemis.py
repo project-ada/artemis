@@ -5,7 +5,7 @@ import subprocess
 
 
 class Artemis(object):
-    def __init__(self, config_file):
+    def __init__(self, config_file='config.yml'):
         with open(config_file, 'r') as f:
             self.config = yaml.load(f)
         self.environments = self.__get_environment_list()
@@ -30,6 +30,19 @@ class Artemis(object):
         env = Environment(name, version)
         self.environments.append(env)
 
+    def provision_environment(self, env):
+        print self.__kubectl("create namespace %s" % env.get_name())
+        for cmd in self.config['kubeinit']:
+            print self.__kubectl("--namespace %s %s" % (env.get_name(),cmd))
+
+        for c in env.get_components():
+            if c.get_type() == 'kube':
+                print "Provisioning kubernetes component %s" % c.get_name()
+                print self.__kubectl("create -f -", input=open(c.get_file(), 'r'))
+
+    def teardown_environment(self, env):
+        print self.__kubectl("delete namespace %s" % env.get_name())
+
     def __get_environment_list(self):
         return [Environment(i, self.__read_env_version(i))
                 for i in os.listdir("environments/")]
@@ -47,18 +60,23 @@ class Artemis(object):
         with open("environments/" + env_name + "/VERSION", 'r') as f:
             return f.readline()
 
-    def __kubectl(self, cmd):
+    def __kubectl(self, cmd, input=None):
         return subprocess.check_output(
             "%s %s" %
-            (self.config.get('kubectl'), cmd), shell=True)
+            (self.config.get('kubectl'), cmd), shell=True, stdin=input)
 
     def run_cli(self):
         if len(sys.argv) < 2:
             return
 
         if sys.argv[1] == 'list-envs':
+            envs = self.get_environments()
+            if not len(envs):
+                print "No environments."
+                return
+            
             print "Created environments:"
-            for e in self.get_environments():
+            for e in envs:
                 print e
 
         if sys.argv[1] == 'list-components':
@@ -73,11 +91,22 @@ class Artemis(object):
         if sys.argv[1] == 'create':
             self.create_environment(sys.argv[2], sys.argv[3])
 
+        if sys.argv[1] == 'build':
+            env = self.get_environment(sys.argv[2])
+            print "Building %s" % env.get_name()
+            self.provision_environment(env)
+
+        if sys.argv[1] == 'teardown':
+            env = self.get_environment(sys.argv[2])
+            print "Tearing down %s" % env.get_name()
+            self.teardown_environment(env)
+
         if sys.argv[1] == 'get-image-tag':
             env = self.get_environment(sys.argv[2])
             comp = env.get_component(sys.argv[3])
-            print "Tag for %s in %s: %s" %
-            (comp.get_name(), env.get_name(), comp.get_image_tag())
+            print "Tag for %s in %s: %s" % (comp.get_name(),
+                                            env.get_name(),
+                                            comp.get_image_tag())
 
         if sys.argv[1] == 'set-image-tag':
             env = self.get_environment(sys.argv[2])
@@ -85,6 +114,9 @@ class Artemis(object):
             print "Old tag: %s" % comp.get_image_tag()
             comp.set_image_tag(sys.argv[4])
             print "New tag: %s" % comp.get_image_tag()
+            self.__kubectl("--namespace=%s rolling-update %s --image=%s" % (env.get_name(),
+                                                                          comp.get_name(),
+                                                                          comp.get_image_name()))
 
 
 class Environment(object):
@@ -94,9 +126,9 @@ class Environment(object):
         self.components = []
 
         if not os.path.isdir(self.__get_env_dir()):
-            self.make_spec()
+            self.__make_spec()
         else:
-            self.read_spec()
+            self.__read_spec()
 
     def get_name(self):
         return self.name
@@ -112,7 +144,7 @@ class Environment(object):
     def get_components(self):
         return self.components
 
-    def make_spec(self):
+    def __make_spec(self):
         print "Copying environment spec from %s" % self.__get_skel_dir()
         os.mkdir(self.__get_env_dir())
 
@@ -131,7 +163,7 @@ class Environment(object):
             comp = self.__gen_component(env_file_path)
             self.components.append(comp)
 
-    def read_spec(self):
+    def __read_spec(self):
         for i in os.listdir(self.__get_env_dir()):
             file_path = os.path.join(self.__get_env_dir(), i)
             if not os.path.isfile(file_path) or i == 'VERSION':
@@ -145,20 +177,11 @@ class Environment(object):
             file=file_path,
             component_type='kube' if file_extension == '.yaml' else 'tf')
 
-    def build(self):
-        pass
-
-    def teardown(self):
-        pass
-
     def __get_skel_dir(self):
         return "skeletons/%s" % self.version
 
     def __get_env_dir(self):
         return "environments/%s" % self.name
-
-    def __kubectl(self, arg):
-        return super(Environment, self).__kubectl(arg)
 
     def __str__(self):
         return self.name
@@ -176,6 +199,9 @@ class Component(object):
     def get_type(self):
         return self.type
 
+    def get_file(self):
+        return self.file
+
     def get_spec(self):
         return self.__read_spec() if self.type == 'kube' else ''
 
@@ -185,11 +211,14 @@ class Component(object):
         self.__write_spec(spec)
 
     def get_image_tag(self):
+        return self.get_image_name().split(":")[1]
+
+    def get_image_name(self):
         if self.type != 'kube':
             return
         spec = self.__read_spec()
         try:
-            return spec['spec']['template']['spec']['containers'][0]['image'].split(":")[1]
+            return spec['spec']['template']['spec']['containers'][0]['image']
         except:
             return ""
 

@@ -1,1 +1,3 @@
 kubectl: '/kubernetes/cluster/kubectl.sh'
+kubeinit: []
+stages: ['int', 'stg', 'prd']
