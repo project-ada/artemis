@@ -310,7 +310,7 @@ if __name__ == '__main__':
             call_image_update(env_name, component_name, image_tag)
             return "Request processing"
 
-        ui.run()
+        ui.run(host='0.0.0.0')
     else:
         tool.run_cli()
 
