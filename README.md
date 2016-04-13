@@ -12,6 +12,16 @@ Artemis makes no effort to authenticate to pull the repo -- currently we merely 
 
 Created environments are stored in ```environments/<environment_name>```.
 
+Installation in a virtualenv:
+```
+git clone git@github.com:project-ada/artemis.git
+cd artemis
+virtualenv .
+source bin/activate
+pip install -r requirements.txt
+vim config.yml
+```
+
 To create an environment from a specification:
 ```
 python cli.py create test-env 1.0
@@ -42,4 +52,9 @@ python cli.py set-image-tag test-env my-nginx-rc latest
 To destroy environment in Kubernetes:
 ```
 python cli.py teardown test-env
+```
+
+To run a rudimentary flask-based UI:
+```
+python ui.py
 ```
