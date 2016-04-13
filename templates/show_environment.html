@@ -29,6 +29,7 @@
 	<td><input type="text" name="{{ c.name }}" value="{{ c.image_tag }}" id="image-{{ c.name }}" /></td>
 	<td>
 		<input type="button" onclick="fetchival('/update/{{ c.env.name }}/{{ c.name }}/'+document.getElementById('image-{{ c.name }}').value).get(); alert('Updating image tag on {{ c.name }} ...');" value="Update" />
+		<input type="button" onclick="fetchival('/recreate/{{ c.env.name }}/{{ c.name }}').get(); alert('Recreating {{ c.name }} ...');" value="Recreate" />
 	</td>
 {% else %}
 	<td colspan="2"></td>

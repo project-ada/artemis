@@ -1,4 +1,6 @@
 kubectl: '/kubernetes/cluster/kubectl.sh'
 kubeinit: ['']
 stages: ['int', 'stg', 'prd']
+spec_use_git: false
 spec_repo: ''
+spec_dir: 'sample_specs'

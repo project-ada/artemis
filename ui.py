@@ -68,5 +68,12 @@ def update_image(env_name, component_name, image_tag):
     call_image_update(env_name, component_name, image_tag)
     return "Request processing"
 
+@ui.route('/recreate/<env_name>/<component_name>')
+def recreate_component(env_name, component_name):
+    env = tool.get_environment(env_name)
+    component = env.get_component(component_name)
+    tool.recreate_component(component)
+    return "Recreated"
+
 
 ui.run(host='0.0.0.0')

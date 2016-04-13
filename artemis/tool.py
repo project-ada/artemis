@@ -9,6 +9,8 @@ class Artemis(object):
         with open(config_file, 'r') as f:
             self.config = yaml.load(f)
         self.environments = self.__get_environment_list()
+        if self.config.get('spec_use_git', False):
+            self._update_env_specs()
 
     def get_environments(self):
         return self.environments
@@ -24,7 +26,7 @@ class Artemis(object):
             return
 
         self._update_env_specs()
-        if not os.path.isdir("skeletons/" + version):
+        if not os.path.isdir("%s/%s" % (self.config.get('spec_dir'), version)):
             print "Version %s does not exist" % version
             return
         print "Creating environment %s, version %s" % (name, version)
@@ -40,6 +42,10 @@ class Artemis(object):
             if c.get_type() == 'kube':
                 print "Provisioning kubernetes component %s" % c.get_name()
                 print self._kubectl("create -f -", input=open(c.get_file(), 'r'))
+
+    def recreate_component(self, comp):
+        print self._kubectl("delete -f -", input=open(comp.get_file(), 'r'))
+        print self._kubectl("create -f -", input=open(comp.get_file(), 'r'))
 
     def teardown_environment(self, env):
         print self._kubectl("delete namespace %s" % env.get_name())
@@ -81,10 +87,10 @@ class Artemis(object):
             (self.config.get('kubectl'), cmd), shell=True, stdin=input)
 
     def _update_env_specs(self):
-        if os.path.isdir("skeletons/"):
-            print subprocess.check_output("cd skeletons && git pull", shell=True)
+        if os.path.isdir("%s/" % self.config.get('spec_dir')):
+            print subprocess.check_output("cd %s && git pull" % self.config.get('spec_dir'), shell=True)
         else:
-            print subprocess.check_output("git clone %s skeletons" % self.config.get('spec_repo'), shell=True)
+            print subprocess.check_output("git clone %s %s" % (self.config.get('spec_repo'), self.config.get('spec_dir')), shell=True)
 
     def run_cli(self):
         if len(sys.argv) < 2:
@@ -209,7 +215,7 @@ class Environment(object):
             env=self)
 
     def __get_skel_dir(self):
-        return "skeletons/%s" % self.version
+        return "%s/%s" % (self.config.get('spec_dir'), self.version)
 
     def __get_env_dir(self):
         return "environments/%s" % self.name
