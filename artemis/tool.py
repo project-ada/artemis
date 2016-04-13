@@ -25,7 +25,7 @@ class Artemis(object):
 
         if self.config.get('spec_use_git', False):
             self._update_env_specs()
-            
+
         if not os.path.isdir("%s/%s" % (self.config.get('spec_dir'), version)):
             print "Version %s does not exist" % version
             return
@@ -36,7 +36,7 @@ class Artemis(object):
     def provision_environment(self, env):
         print self._kubectl("create namespace %s" % env.get_name())
         for cmd in self.config['kubeinit']:
-            print self._kubectl("--namespace %s %s" % (env.get_name(),cmd))
+            print self._kubectl("--namespace %s %s" % (env.get_name(), cmd))
 
         for c in env.get_components():
             if c.get_type() == 'kube':
@@ -55,8 +55,8 @@ class Artemis(object):
         comp = env.get_component(comp_name)
         comp.set_image_tag(image_tag)
         self._kubectl("--namespace=%s rolling-update %s --image=%s" % (env.get_name(),
-                                                                      comp.get_name(),
-                                                                      comp.get_image_name()))
+                                                                       comp.get_name(),
+                                                                       comp.get_image_name()))
 
     def get_component_uptime(self, env_name, component_name):
         return self._kubectl("--namespace=%s get po --selector=app=%s|tail -n1|awk '{ print $5}'" % (env_name, component_name))
@@ -71,11 +71,11 @@ class Artemis(object):
     def __get_kube_environment_list(self):
         return [{'name': env.split(" ")[0], 'version': env.split(" ")[1]}
                 for env in self._kubectl("get namespaces -L env_version"
-                                          "awk '{ print $1,$4 }' | "
-                                          "tail -n+2 | "
-                                          "grep -v default | "
-                                          "grep -v kube-system"
-                                          ).split("\n") if ' ' in env]
+                                         "awk '{ print $1,$4 }' | "
+                                         "tail -n+2 | "
+                                         "grep -v default | "
+                                         "grep -v kube-system"
+                                         ).split("\n") if ' ' in env]
 
     def __read_env_version(self, env_name):
         with open("environments/" + env_name + "/VERSION", 'r') as f:
@@ -91,6 +91,10 @@ class Artemis(object):
             print subprocess.check_output("cd %s && git pull" % self.config.get('spec_dir'), shell=True)
         else:
             print subprocess.check_output("git clone %s %s" % (self.config.get('spec_repo'), self.config.get('spec_dir')), shell=True)
+
+    def __log(self, message):
+        if self.config.get('log_stdout', False):
+            print log_message
 
 
 class Environment(object):

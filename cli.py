@@ -11,7 +11,7 @@ def run_cli(tool):
         if not len(envs):
             print "No environments."
             return
-        
+
         print "Created environments:"
         for e in envs:
             print e
@@ -48,8 +48,8 @@ def run_cli(tool):
         env = tool.get_environment(sys.argv[2])
         comp = env.get_component(sys.argv[3])
         print "Name for %s in %s: %s" % (comp.get_name(),
-                                        env.get_name(),
-                                        comp.get_image_name())
+                                         env.get_name(),
+                                         comp.get_image_name())
 
     if sys.argv[1] == 'set-image-tag':
         env = tool.get_environment(sys.argv[2])
@@ -58,8 +58,8 @@ def run_cli(tool):
         comp.set_image_tag(sys.argv[4])
         print "New tag: %s" % comp.get_image_tag()
         tool._kubectl("--namespace=%s rolling-update %s --image=%s" % (env.get_name(),
-                                                                      comp.get_name(),
-                                                                      comp.get_image_name()))
+                                                                       comp.get_name(),
+                                                                       comp.get_image_name()))
 
 
 tool = Artemis(config_file='config.yml')
