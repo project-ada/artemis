@@ -3,9 +3,9 @@ Tool to manage environments with Kubernetes and Terraform. WIP
 
 Environment specifications should be stored in a repository set in the configuration variable 'spec_repo'.
 
-The specifications include:
-- terraform specification files ending in .tf (WIP)
-- kubernetes resource files ending in .yaml
+The specifications can include:
+- terraform specification files in ```spec_repo/<version>/*.tf``` (WIP)
+- kubernetes resource files in ```spec_repo/<version>/*.yaml```
 
 Artemis makes no effort to authenticate to pull the repo -- currently we merely run ```git clone $spec_repo```, or ```git pull``` if the directory exists.
 
