@@ -31,31 +31,31 @@ class Artemis(object):
         self.environments.append(env)
 
     def provision_environment(self, env):
-        print self.__kubectl("create namespace %s" % env.get_name())
+        print self._kubectl("create namespace %s" % env.get_name())
         for cmd in self.config['kubeinit']:
-            print self.__kubectl("--namespace %s %s" % (env.get_name(),cmd))
+            print self._kubectl("--namespace %s %s" % (env.get_name(),cmd))
 
         for c in env.get_components():
             if c.get_type() == 'kube':
                 print "Provisioning kubernetes component %s" % c.get_name()
-                print self.__kubectl("create -f -", input=open(c.get_file(), 'r'))
+                print self._kubectl("create -f -", input=open(c.get_file(), 'r'))
 
     def teardown_environment(self, env):
-        print self.__kubectl("delete namespace %s" % env.get_name())
+        print self._kubectl("delete namespace %s" % env.get_name())
 
     def update_component(self, env_name, comp_name, image_tag):
         env = self.get_environment(env_name)
         comp = env.get_component(comp_name)
         comp.set_image_tag(image_tag)
-        self.__kubectl("--namespace=%s rolling-update %s --image=%s" % (env.get_name(),
+        self._kubectl("--namespace=%s rolling-update %s --image=%s" % (env.get_name(),
                                                                       comp.get_name(),
                                                                       comp.get_image_name()))
 
     def get_component_uptime(self, env_name, component_name):
-        return self.__kubectl("--namespace=%s get po --selector=app=%s|tail -n1|awk '{ print $5}'" % (env_name, component_name))
+        return self._kubectl("--namespace=%s get po --selector=app=%s|tail -n1|awk '{ print $5}'" % (env_name, component_name))
 
     def get_component_pod_name(self, env_name, component_name):
-        return self.__kubectl("--namespace=%s get po --selector=app=%s|tail -n1|awk '{ print $1}'" % (env_name, component_name))
+        return self._kubectl("--namespace=%s get po --selector=app=%s|tail -n1|awk '{ print $1}'" % (env_name, component_name))
 
     def __get_environment_list(self):
         return [Environment(i, self.__read_env_version(i))
@@ -63,7 +63,7 @@ class Artemis(object):
 
     def __get_kube_environment_list(self):
         return [{'name': env.split(" ")[0], 'version': env.split(" ")[1]}
-                for env in self.__kubectl("get namespaces -L env_version"
+                for env in self._kubectl("get namespaces -L env_version"
                                           "awk '{ print $1,$4 }' | "
                                           "tail -n+2 | "
                                           "grep -v default | "
@@ -74,7 +74,7 @@ class Artemis(object):
         with open("environments/" + env_name + "/VERSION", 'r') as f:
             return f.readline()
 
-    def __kubectl(self, cmd, input=None):
+    def _kubectl(self, cmd, input=None):
         return subprocess.check_output(
             "%s %s" %
             (self.config.get('kubectl'), cmd), shell=True, stdin=input)
@@ -134,7 +134,7 @@ class Artemis(object):
             print "Old tag: %s" % comp.get_image_tag()
             comp.set_image_tag(sys.argv[4])
             print "New tag: %s" % comp.get_image_tag()
-            self.__kubectl("--namespace=%s rolling-update %s --image=%s" % (env.get_name(),
+            self._kubectl("--namespace=%s rolling-update %s --image=%s" % (env.get_name(),
                                                                           comp.get_name(),
                                                                           comp.get_image_name()))
 
@@ -198,7 +198,8 @@ class Environment(object):
         return Component(
             name=file_name.split("/")[-1] if '/' in file_name else file_name,
             file=file_path,
-            component_type='kube' if file_extension == '.yaml' else 'tf')
+            component_type='kube' if file_extension == '.yaml' else 'tf',
+            env=self)
 
     def __get_skel_dir(self):
         return "skeletons/%s" % self.version
@@ -211,10 +212,11 @@ class Environment(object):
 
 
 class Component(object):
-    def __init__(self, name, file, component_type):
+    def __init__(self, name, file, component_type, env):
         self.name = name
         self.file = file
         self.type = component_type
+        self.env = env
 
     def get_name(self):
         return self.name
@@ -249,6 +251,9 @@ class Component(object):
         if self.type != 'kube':
             return
         spec = self.__read_spec()
+        if spec['kind'] != 'ReplicationController':
+            return ""
+
         try:
             return spec['spec']['template']['spec']['containers'][0]['image']
         except:
@@ -260,6 +265,8 @@ class Component(object):
         if new_tag == '':
             raise ValueError
         spec = self.__read_spec()
+        if spec['kind'] != 'ReplicationController':
+            return
         image_name, image_tag = spec['spec']['template']['spec']['containers'][0]['image'].split(":")
         spec['spec']['template']['spec']['containers'][0]['image'] = image_name + ":" + new_tag
         self.__write_spec(spec)

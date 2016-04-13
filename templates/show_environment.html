@@ -11,23 +11,30 @@
 <tr style="font-weight:bold">
 	<td>Name</td>
 	<td>Uptime</td>
+	<td>Status</td>
 	<td>Pod name</td>
 	<td>Image name</td>
 	<td>Image tag</td>
 	<td>Actions</td>
 </tr>
-{% for c in env.get_components('kube') %}
-{% if c.get_image_tag() != "" %}
+{% for c in components %}
 <tr>
-	<td>{{ c.get_name() }}</td>
-	<td>{{ tool.get_component_uptime(env.get_name(), c.get_name()) }}</td>
-	<td>{{ tool.get_component_pod_name(env.get_name(), c.get_name()) }}</td>
-	<td>{{ c.get_image_basename() }}</td>
-	<td><input type="text" name="{{ c.get_name() }}" value="{{ c.get_image_tag() }}" id="image-{{ c.get_name() }}" /></td>
-	<td><input type="button" onclick="fetchival('/update/{{ env.get_name() }}/{{ c.get_name() }}/'+document.getElementById('image-{{ c.get_name() }}').value).get()" value="Update" /></td>
+	<td>{{ c.name }}</td>
+	<td>{{ c.uptime }}</td>
+	<td><a href="/logs/{{ c.env.get_name() }}/{{ c.pod_name }}" target="_blank">{{ c.status }}</a></td>
+	<td>{{ c.pod_name }}</td>
+	<td>{{ c.image_name }}</td>
+
+{% if c.status == "Running" %}
+	<td><input type="text" name="{{ c.name }}" value="{{ c.image_tag }}" id="image-{{ c.name }}" /></td>
+	<td>
+		<input type="button" onclick="fetchival('/update/{{ c.env.name }}/{{ c.name }}/'+document.getElementById('image-{{ c.name }}').value).get(); alert('Updating image tag on {{ c.name }} ...');" value="Update" />
+	</td>
+{% else %}
+	<td colspan="2"></td>
+{% endif %}
 
 </tr>
-{% endif %}
 {% endfor %}
 </table>
 </body>
