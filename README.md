@@ -41,7 +41,7 @@ python cli.py list-envs
 
 To list components in an environment:
 ```
-python cli.py list-comp <environment_name>
+python cli.py list-components <environment_name>
 ```
 
 To update an image tag in a component:
