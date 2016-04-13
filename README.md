@@ -1,13 +1,16 @@
 # Artemis
 Tool to manage environments with Kubernetes and Terraform. WIP
 
-Environment specifications are stored in skeletons/<version>/
+Environment specifications should be stored in a repository set in the configuration variable 'spec_repo'.
+
 The specifications include:
-- terraform specification files ending in .tf
+- terraform specification files ending in .tf (WIP)
 - kubernetes resource files ending in .yaml
 
+Artemis makes no effort to authenticate to pull the repo -- currently we merely run ```git clone $spec_repo```, or ```git pull``` if the directory exists.
 
-Created environments are stored in environments/<version_name>
+
+Created environments are stored in ```environments/<environment_name>```.
 
 To create an environment from a specification:
 ```
