@@ -62,6 +62,7 @@ def show_environment(env_name):
 def logs(env_name, pod_name):
     return render_template("stdout.html", stdout=tool._kubectl("--namespace=%s logs %s" % (env_name, pod_name)))
 
+
 @ui.route('/update/<env_name>/<component_name>/<image_tag>')
 def update_image(env_name, component_name, image_tag):
     call_image_update(env_name, component_name, image_tag)

@@ -23,6 +23,7 @@ class Artemis(object):
             print "Environment %s exists already" % name
             return
 
+        self._update_env_specs()
         if not os.path.isdir("skeletons/" + version):
             print "Version %s does not exist" % version
             return
@@ -78,6 +79,12 @@ class Artemis(object):
         return subprocess.check_output(
             "%s %s" %
             (self.config.get('kubectl'), cmd), shell=True, stdin=input)
+
+    def _update_env_specs(self):
+        if os.path.isdir("skeletons/"):
+            print subprocess.check_output("cd skeletons && git pull", shell=True)
+        else:
+            print subprocess.check_output("git clone %s skeletons" % self.config.get('spec_repo'), shell=True)
 
     def run_cli(self):
         if len(sys.argv) < 2:

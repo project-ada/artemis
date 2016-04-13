@@ -1,3 +1,4 @@
 kubectl: '/kubernetes/cluster/kubectl.sh'
-kubeinit: []
+kubeinit: ['']
 stages: ['int', 'stg', 'prd']
+spec_repo: ''
