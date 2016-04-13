@@ -9,8 +9,6 @@ class Artemis(object):
         with open(config_file, 'r') as f:
             self.config = yaml.load(f)
         self.environments = self.__get_environment_list()
-        if self.config.get('spec_use_git', False):
-            self._update_env_specs()
 
     def get_environments(self):
         return self.environments
@@ -25,7 +23,9 @@ class Artemis(object):
             print "Environment %s exists already" % name
             return
 
-        self._update_env_specs()
+        if self.config.get('spec_use_git', False):
+            self._update_env_specs()
+            
         if not os.path.isdir("%s/%s" % (self.config.get('spec_dir'), version)):
             print "Version %s does not exist" % version
             return
@@ -91,65 +91,6 @@ class Artemis(object):
             print subprocess.check_output("cd %s && git pull" % self.config.get('spec_dir'), shell=True)
         else:
             print subprocess.check_output("git clone %s %s" % (self.config.get('spec_repo'), self.config.get('spec_dir')), shell=True)
-
-    def run_cli(self):
-        if len(sys.argv) < 2:
-            return
-
-        if sys.argv[1] == 'list-envs':
-            envs = self.get_environments()
-            if not len(envs):
-                print "No environments."
-                return
-            
-            print "Created environments:"
-            for e in envs:
-                print e
-
-        if sys.argv[1] == 'list-components':
-            env = self.get_environment(sys.argv[2])
-            if not env:
-                print "No such environment"
-                return
-            print "Components in %s:" % env.get_name()
-            for c in env.get_components():
-                print c
-
-        if sys.argv[1] == 'create':
-            self.create_environment(sys.argv[2], sys.argv[3])
-
-        if sys.argv[1] == 'build':
-            env = self.get_environment(sys.argv[2])
-            print "Building %s" % env.get_name()
-            self.provision_environment(env)
-
-        if sys.argv[1] == 'teardown':
-            env = self.get_environment(sys.argv[2])
-            print "Tearing down %s" % env.get_name()
-            self.teardown_environment(env)
-
-        if sys.argv[1] == 'get-image-tag':
-            env = self.get_environment(sys.argv[2])
-            comp = env.get_component(sys.argv[3])
-            print "Tag for %s in %s: %s" % (comp.get_name(),
-                                            env.get_name(),
-                                            comp.get_image_tag())
-        if sys.argv[1] == 'get-image-name':
-            env = self.get_environment(sys.argv[2])
-            comp = env.get_component(sys.argv[3])
-            print "Name for %s in %s: %s" % (comp.get_name(),
-                                            env.get_name(),
-                                            comp.get_image_name())
-
-        if sys.argv[1] == 'set-image-tag':
-            env = self.get_environment(sys.argv[2])
-            comp = env.get_component(sys.argv[3])
-            print "Old tag: %s" % comp.get_image_tag()
-            comp.set_image_tag(sys.argv[4])
-            print "New tag: %s" % comp.get_image_tag()
-            self._kubectl("--namespace=%s rolling-update %s --image=%s" % (env.get_name(),
-                                                                          comp.get_name(),
-                                                                          comp.get_image_name()))
 
 
 class Environment(object):
