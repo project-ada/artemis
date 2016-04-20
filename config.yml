@@ -3,4 +3,9 @@ kubeinit: ['']
 stages: ['int', 'stg', 'prd']
 spec_use_git: false
 spec_repo: ''
-spec_dir: 'sample_specs'
+spec_dir: 'skeletons'
+terraform_command: 'terraform'
+aws_access_key: ''
+aws_secret_key: ''
+
+slack_notification_webhook: ''
