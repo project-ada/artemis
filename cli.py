@@ -28,10 +28,18 @@ def run_cli(tool):
     if sys.argv[1] == 'create':
         tool.create_environment(sys.argv[2], sys.argv[3])
 
+    if sys.argv[1] == 'tf':
+        tool._terraform(' '.join(sys.argv[2:]))
+
     if sys.argv[1] == 'build':
         env = tool.get_environment(sys.argv[2])
         print "Building %s" % env.get_name()
         tool.provision_environment(env)
+
+    if sys.argv[1] == 'refresh-spec':
+        env = tool.get_environment(sys.argv[2])
+        print "Calling refresh on %s" % env.get_name()
+        tool.refresh_environment(env)
 
     if sys.argv[1] == 'teardown':
         env = tool.get_environment(sys.argv[2])
@@ -44,6 +52,12 @@ def run_cli(tool):
         print "Tag for %s in %s: %s" % (comp.get_name(),
                                         env.get_name(),
                                         comp.get_image_tag())
+
+    if sys.argv[1] == 'recreate':
+        env = tool.get_environment(sys.argv[2])
+        component = env.get_component(sys.argv[3])
+        tool.recreate_component(component)
+
     if sys.argv[1] == 'get-image-name':
         env = tool.get_environment(sys.argv[2])
         comp = env.get_component(sys.argv[3])

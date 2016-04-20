@@ -2,6 +2,7 @@ import sys
 import os
 import yaml
 import subprocess
+import shutil
 
 
 class Artemis(object):
@@ -34,7 +35,9 @@ class Artemis(object):
         self.environments.append(env)
 
     def provision_environment(self, env):
+        print self._terraform(env, "apply")
         print self._kubectl("create namespace %s" % env.get_name())
+
         for cmd in self.config['kubeinit']:
             print self._kubectl("--namespace %s %s" % (env.get_name(), cmd))
 
@@ -44,11 +47,19 @@ class Artemis(object):
                 print self._kubectl("create -f -", input=open(c.get_file(), 'r'))
 
     def recreate_component(self, comp):
-        print self._kubectl("delete -f -", input=open(comp.get_file(), 'r'))
+        try:
+            print self._kubectl("delete -f -", input=open(comp.get_file(), 'r'))
+        except:
+            pass
         print self._kubectl("create -f -", input=open(comp.get_file(), 'r'))
+
+    def refresh_environment(self, env):
+        self._update_env_specs()
+        env.refresh_spec()
 
     def teardown_environment(self, env):
         print self._kubectl("delete namespace %s" % env.get_name())
+        print self._terraform(env, "destroy -force")
 
     def update_component(self, env_name, comp_name, image_tag):
         env = self.get_environment(env_name)
@@ -86,7 +97,18 @@ class Artemis(object):
             "%s %s" %
             (self.config.get('kubectl'), cmd), shell=True, stdin=input)
 
+    def _terraform(self, env, cmd, add_credentials=True):
+        return subprocess.check_output("cd %s && %s %s %s" % (
+                                       env.get_env_dir(),
+                                       self.config.get('terraform_command', 'terraform'),
+                                       cmd,
+                                       "-var 'aws_access_key=" + self.config.get('aws_access_key') + "' -var 'aws_secret_key=" + self.config.get('aws_secret_key') + "' " if add_credentials else ""),
+                                       shell=True)
+
     def _update_env_specs(self):
+        if not self.config.get('spec_use_git', False):
+            return
+
         if os.path.isdir("%s/" % self.config.get('spec_dir')):
             print subprocess.check_output("cd %s && git pull" % self.config.get('spec_dir'), shell=True)
         else:
@@ -100,10 +122,10 @@ class Artemis(object):
 class Environment(object):
     def __init__(self, name, version):
         self.name = name
-        self.version = version
+        self.version = version.strip()
         self.components = []
 
-        if not os.path.isdir(self.__get_env_dir()):
+        if not os.path.isdir(self.get_env_dir()):
             self.__make_spec()
         else:
             self.__read_spec()
@@ -119,6 +141,9 @@ class Environment(object):
             if c.get_name() == name:
                 return c
 
+    def refresh_spec(self):
+        self.__make_spec()
+
     def get_components(self, resource_type=''):
         if not resource_type:
             return self.components
@@ -126,27 +151,54 @@ class Environment(object):
             return [c for c in self.components if c.get_type() == resource_type]
 
     def __make_spec(self):
-        print "Copying environment spec from %s" % self.__get_skel_dir()
-        os.mkdir(self.__get_env_dir())
+        preserved_component_images = []
+        terraform_state = False
 
-        for i in os.listdir(self.__get_skel_dir()):
-            file_path = os.path.join(self.__get_skel_dir(), i)
+        if os.path.isdir("environments/" + self.name):
+            # we are refreshing the environment specs
+            print "Refreshing environment spec from %s" % self.get_skel_dir()
+
+            for c in self.get_components(resource_type='kube'):
+                if c.get_image_basename():
+                    preserved_component_images.append({
+                        'name': c.get_name(),
+                        'image': c.get_image_basename(),
+                        'image_tag': c.get_image_tag()
+                        })
+
+            print "Preserved image tags: %s" % preserved_component_images
+            shutil.rmtree(self.get_env_dir())
+        else:
+            print "Copying environment spec from %s" % self.get_skel_dir()
+
+        os.mkdir(self.get_env_dir())
+
+        for i in os.listdir(self.get_skel_dir()):
+            file_path = os.path.join(self.get_skel_dir(), i)
             if not os.path.isfile(file_path):
                 continue
-            env_file_path = os.path.join(self.__get_env_dir(), i)
+            env_file_path = os.path.join(self.get_env_dir(), i)
             with open(file_path, 'r') as s, open(env_file_path, 'w') as t:
                 for line in s:
-                    t.write(line.replace("ENV_NAME", self.name))
+                    t.write(line.replace("%%ENV_NAME%%", self.name))
 
-            with open(os.path.join(self.__get_env_dir(), "VERSION"), 'w') as f:
+            with open(os.path.join(self.get_env_dir(), "VERSION"), 'w') as f:
                 f.write(self.version + "\n")
 
             comp = self.__gen_component(env_file_path)
             self.components.append(comp)
 
+        for p in preserved_component_images:
+            c = self.get_component(p['name'])
+            if c.get_image_basename() != p['image']:
+                print "Not preserving image tag for %s, as image has changed (new: %s)" % (c.get_name(), c.get_image_basename())
+                continue
+            print "Preserved %s image tag as %s" % (c.get_name(), p['image_tag'])
+            c.set_image_tag(p['image_tag'])
+
     def __read_spec(self):
-        for i in os.listdir(self.__get_env_dir()):
-            file_path = os.path.join(self.__get_env_dir(), i)
+        for i in os.listdir(self.get_env_dir()):
+            file_path = os.path.join(self.get_env_dir(), i)
             if not os.path.isfile(file_path) or i == 'VERSION':
                 continue
             self.components.append(self.__gen_component(file_path))
@@ -159,10 +211,10 @@ class Environment(object):
             component_type='kube' if file_extension == '.yaml' else 'tf',
             env=self)
 
-    def __get_skel_dir(self):
-        return "%s/%s" % (self.config.get('spec_dir'), self.version)
+    def get_skel_dir(self):
+        return "%s/%s" % ("skeletons", self.version)
 
-    def __get_env_dir(self):
+    def get_env_dir(self):
         return "environments/%s" % self.name
 
     def __str__(self):
