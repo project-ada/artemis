@@ -9,9 +9,13 @@ The specifications can include:
 
 Artemis makes no effort to authenticate to pull the repo if spec_use_git is true -- currently we merely run ```git clone $spec_repo```, or ```git pull``` if the directory exists.
 
-
 Created environments are stored in ```environments/<environment_name>```.
 
+## Assumptions
+- Docker images are pushed to a repository with the tag ```<branch_name>-<build_number>``` and ```<branch_name>-latest```.
+- Currently, the only supported Kubernetes 'component' is a ReplicationController
+
+## Installation
 Installation in a virtualenv:
 ```
 git clone git@github.com:project-ada/artemis.git
@@ -22,6 +26,7 @@ pip install -r requirements.txt
 vim config.yml
 ```
 
+## Quick start
 To create an environment from a specification:
 ```
 python cli.py create <environment_name> <spec_version>
