@@ -23,6 +23,9 @@ ui.config.update(
 def call_image_update(env_name, component_name, image_tag):
     tool.update_component(env_name, component_name, image_tag)
 
+@async
+def call_recreate_component(component):
+    tool.recreate_component(component)
 
 @ui.route('/')
 def list_environments():
@@ -76,5 +79,21 @@ def recreate_component(env_name, component_name):
     tool.recreate_component(component)
     return "Recreated"
 
+@ui.route('/newimage/<image_vendor>/<image_name>/<branch_name>/<build_number>')
+def new_image_version(image_vendor, image_name, branch_name, build_number):
+    for env in tool.get_environments():
+        for component in env.get_components(resource_type='kube'):
+            if component.get_image_basename() != image_vendor + "/" + image_name:
+                continue
+            try:
+                component_branch, component_tag = component.get_image_tag().split("-")
+            except:
+                continue
+            if component_branch != branch_name or component_tag != 'latest':
+                continue
+            print "Updating %s %s with %s" % (env.get_name(), component.get_name(), component.get_image_tag())
+            call_recreate_component(component)
+
+    return "OK"
 
 ui.run(host='0.0.0.0')
