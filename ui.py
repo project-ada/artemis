@@ -1,6 +1,8 @@
 from artemis.tool import Artemis
 from threading import Thread
 from flask import Flask, render_template
+import requests
+import simplejson as json
 
 
 def async(f):
@@ -81,6 +83,7 @@ def recreate_component(env_name, component_name):
 
 @ui.route('/newimage/<image_vendor>/<image_name>/<branch_name>/<build_number>')
 def new_image_version(image_vendor, image_name, branch_name, build_number):
+    updated_environments = []
     for env in tool.get_environments():
         for component in env.get_components(resource_type='kube'):
             if component.get_image_basename() != image_vendor + "/" + image_name:
@@ -93,7 +96,17 @@ def new_image_version(image_vendor, image_name, branch_name, build_number):
                 continue
             print "Updating %s %s with %s" % (env.get_name(), component.get_name(), component.get_image_tag())
             call_recreate_component(component)
+            updated_environments.append(env.get_name())
 
+    if tool._get_config('slack_notification_webhook') and updated_environments:
+        msg = {
+            'username': 'artemis',
+            'text': "Component '%s' is being updated in environment%s %s" % (image_name,
+                                                                        's:' if len(updated_environments) > 1 else '',
+                                                                        ', '.join(updated_environments))
+        }
+        r = requests.post(tool._get_config('slack_notification_webhook'), data=json.dumps(msg))
+        print r
     return "OK"
 
 ui.run(host='0.0.0.0')

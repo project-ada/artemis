@@ -9,7 +9,7 @@ class Artemis(object):
     def __init__(self, config_file='config.yml'):
         with open(config_file, 'r') as f:
             self.config = yaml.load(f)
-        self.environments = self.__get_environment_list()
+        self._update_env_list()
 
     def get_environments(self):
         return self.environments
@@ -33,6 +33,7 @@ class Artemis(object):
         print "Creating environment %s, version %s" % (name, version)
         env = Environment(name, version)
         self.environments.append(env)
+        self._update_env_list()
 
     def provision_environment(self, env):
         print self._terraform(env, "apply")
@@ -87,6 +88,8 @@ class Artemis(object):
                                          "grep -v default | "
                                          "grep -v kube-system"
                                          ).split("\n") if ' ' in env]
+    def _get_config(self, key):
+        return self.config.get(key, False)
 
     def __read_env_version(self, env_name):
         with open("environments/" + env_name + "/VERSION", 'r') as f:
@@ -113,6 +116,9 @@ class Artemis(object):
             print subprocess.check_output("cd %s && git pull" % self.config.get('spec_dir'), shell=True)
         else:
             print subprocess.check_output("git clone %s %s" % (self.config.get('spec_repo'), self.config.get('spec_dir')), shell=True)
+
+    def _update_env_list(self):
+        self.environments = self.__get_environment_list()
 
     def __log(self, message):
         if self.config.get('log_stdout', False):
