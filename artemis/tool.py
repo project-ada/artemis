@@ -47,16 +47,18 @@ class Artemis(object):
         self._update_env_list()
 
     def provision_environment(self, env):
-        print self._terraform(env, "apply")
-        print self._kubectl("create namespace %s" % env.get_name())
+        if self.config.get('terraform_command', False):
+            print self._terraform(env, "apply")
+        if self.config.get('kubectl_command', False):
+            print self._kubectl("create namespace %s" % env.get_name())
 
-        for cmd in self.config['kubeinit']:
-            print self._kubectl("--namespace %s %s" % (env.get_name(), cmd))
+            for cmd in self.config['kubeinit']:
+                print self._kubectl("--namespace %s %s" % (env.get_name(), cmd))
 
-        for c in env.get_components():
-            if c.get_type() == 'kube':
-                print "Provisioning kubernetes component %s" % c.get_name()
-                print self._kubectl("create -f -", input=open(c.get_file(), 'r'))
+            for c in env.get_components():
+                if c.get_type() == 'kube':
+                    print "Provisioning kubernetes component %s" % c.get_name()
+                    print self._kubectl("create -f -", input=open(c.get_file(), 'r'))
 
     def recreate_component(self, comp):
         try:
