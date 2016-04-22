@@ -75,7 +75,10 @@ class Artemis(object):
 
     def teardown_environment(self, env):
         if self.config.get('kubectl_command', False):
-            print self._kubectl("delete namespace %s" % env.get_name())
+            try:
+                print self._kubectl("delete namespace %s" % env.get_name())
+            except:
+                pass
         if self.config.get('terraform_command', False):
             print self._terraform(env, "destroy -force")
 
