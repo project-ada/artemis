@@ -1,4 +1,4 @@
-kubectl: '/kubernetes/cluster/kubectl.sh'
+kubectl_command: '/kubernetes/cluster/kubectl.sh'
 kubeinit: ['']
 stages: ['int', 'stg', 'prd']
 spec_use_git: false
@@ -9,3 +9,5 @@ aws_access_key: ''
 aws_secret_key: ''
 
 slack_notification_webhook: ''
+
+endpoint_zone: ''
