@@ -60,6 +60,8 @@ class Artemis(object):
                     print "Provisioning kubernetes component %s" % c.get_name()
                     print self._kubectl("create -f -", input=open(c.get_file(), 'r'))
 
+        self.create_endpoints(env)
+
     def recreate_component(self, comp):
         try:
             print self._kubectl("delete -f -", input=open(comp.get_file(), 'r'))
@@ -76,6 +78,8 @@ class Artemis(object):
             print self._kubectl("delete namespace %s" % env.get_name())
         if self.config.get('terraform_command', False):
             print self._terraform(env, "destroy -force")
+
+        self.remove_endpoints(env)
 
     def update_component(self, env_name, comp_name, image_tag):
         env = self.get_environment(env_name)
