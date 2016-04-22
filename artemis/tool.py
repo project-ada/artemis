@@ -98,7 +98,7 @@ class Artemis(object):
             except:
                 continue
             elb = self._kubectl("--namespace=%s describe svc %s|grep Ingress|awk '{print $3}'" % (env.get_name(), spec['metadata']['name']))
-            rr, change_info = self.endpoint_zone.create_cname_record("%s.%s.%s" % (spec['metadata']['hostname'], env.get_name(), self.config.get('endpoint_zone')), [elb])
+            rr, change_info = self.endpoint_zone.create_cname_record("%s.%s.%s" % (spec['metadata']['name'], env.get_name(), self.config.get('endpoint_zone')), [elb])
             print rr, change_info
 
     def remove_endpoints(self, env):
