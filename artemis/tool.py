@@ -70,8 +70,10 @@ class Artemis(object):
         env.refresh_spec()
 
     def teardown_environment(self, env):
-        print self._kubectl("delete namespace %s" % env.get_name())
-        print self._terraform(env, "destroy -force")
+        if self.config.get('kubectl_command', False):
+            print self._kubectl("delete namespace %s" % env.get_name())
+        if self.config.get('terraform_command', False):
+            print self._terraform(env, "destroy -force")
 
     def update_component(self, env_name, comp_name, image_tag):
         env = self.get_environment(env_name)
@@ -93,8 +95,8 @@ class Artemis(object):
                     continue
             except:
                 continue
-            elb = self._kubectl("--namespace=%s describe svc %s|grep Ingress|awk '{print $3}'" % (env.get_name(), c.get_name()))
-            rr, change_info = self.endpoint_zone.create_cname_record("%s.%s.%s" % (c.get_name(), env.get_name(), self.config.get('endpoint_zone')), [elb])
+            elb = self._kubectl("--namespace=%s describe svc %s|grep Ingress|awk '{print $3}'" % (env.get_name(), spec['metadata']['name']))
+            rr, change_info = self.endpoint_zone.create_cname_record("%s.%s.%s" % (spec['metadata']['hostname'], env.get_name(), self.config.get('endpoint_zone')), [elb])
             print rr, change_info
 
     def remove_endpoints(self, env):
@@ -135,7 +137,7 @@ class Artemis(object):
     def _kubectl(self, cmd, input=None):
         return subprocess.check_output(
             "%s %s" %
-            (self.config.get('kubectl'), cmd), shell=True, stdin=input)
+            (self.config.get('kubectl_command'), cmd), shell=True, stdin=input)
 
     def _terraform(self, env, cmd, add_credentials=True):
         return subprocess.check_output("cd %s && %s %s %s" % (
