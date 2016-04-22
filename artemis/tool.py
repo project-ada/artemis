@@ -3,6 +3,7 @@ import os
 import yaml
 import subprocess
 import shutil
+import route53
 
 
 class Artemis(object):
@@ -10,6 +11,16 @@ class Artemis(object):
         with open(config_file, 'r') as f:
             self.config = yaml.load(f)
         self._update_env_list()
+        if self.config.get('endpoint_zone', False):
+            conn = route53.connect(
+                aws_access_key_id=self.config.get('aws_access_key'),
+                aws_secret_access_key=self.config.get('aws_secret_key')
+                )
+            for z in conn.list_hosted_zones():
+                if z.name == self.config.get('endpoint_zone'):
+                    self.endpoint_zone = conn.get_hosted_zone_by_id(z.id)
+        else:
+            self.endpoint_zone = False
 
     def get_environments(self):
         return self.environments
@@ -69,6 +80,32 @@ class Artemis(object):
         self._kubectl("--namespace=%s rolling-update %s --image=%s" % (env.get_name(),
                                                                        comp.get_name(),
                                                                        comp.get_image_name()))
+
+    def create_endpoints(self, env):
+        if not self.endpoint_zone:
+            return False
+        for c in env.get_components(resource_type='kube'):
+            spec = c.get_spec()
+            if spec['kind'] != 'Service':
+                continue
+            try:
+                if spec['spec']['type'] != 'LoadBalancer':
+                    continue
+            except:
+                continue
+            elb = self._kubectl("--namespace=%s describe svc %s|grep Ingress|awk '{print $3}'" % (env.get_name(), c.get_name()))
+            rr, change_info = self.endpoint_zone.create_cname_record("%s.%s.%s" % (c.get_name(), env.get_name(), self.config.get('endpoint_zone')), [elb])
+            print rr, change_info
+
+    def remove_endpoints(self, env):
+        if not self.endpoint_zone:
+            return False
+        env_fqdn = "%s.%s" % (env.get_name(), self.config.get('endpoint_zone'))
+
+        for r in self.endpoint_zone.record_sets:
+            if len(env_fqdn) <= len(r.name) and r.name[-len(env_fqdn):] == env_fqdn:
+                print "Deleting %s" % r.name
+                r.delete()
 
     def get_component_uptime(self, env_name, component_name):
         return self._kubectl("--namespace=%s get po --selector=app=%s|tail -n1|awk '{ print $5}'" % (env_name, component_name))

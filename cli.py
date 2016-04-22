@@ -58,6 +58,14 @@ def run_cli(tool):
         component = env.get_component(sys.argv[3])
         tool.recreate_component(component)
 
+    if sys.argv[1] == 'create-endpoints':
+        env = tool.get_environment(sys.argv[2])
+        tool.create_endpoints(env)
+
+    if sys.argv[1] == 'remove-endpoints':
+        env = tool.get_environment(sys.argv[2])
+        tool.remove_endpoints(env)
+
     if sys.argv[1] == 'get-image-name':
         env = tool.get_environment(sys.argv[2])
         comp = env.get_component(sys.argv[3])

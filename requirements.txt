@@ -2,3 +2,4 @@ flask==0.10.1
 PyYAML==3.11
 requests==2.8.1
 simplejson==3.8.1
+route53==1.0
