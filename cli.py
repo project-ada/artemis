@@ -62,6 +62,10 @@ def run_cli(tool):
         env = tool.get_environment(sys.argv[2])
         tool.create_endpoints(env)
 
+    if sys.argv[1] == 'list-endpoints':
+        env = tool.get_environment(sys.argv[2])
+        tool.list_endpoints(env)
+
     if sys.argv[1] == 'remove-endpoints':
         env = tool.get_environment(sys.argv[2])
         tool.remove_endpoints(env)

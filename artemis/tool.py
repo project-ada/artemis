@@ -116,8 +116,17 @@ class Artemis(object):
 
         for r in self.endpoint_zone.record_sets:
             if len(env_fqdn) <= len(r.name) and r.name[-len(env_fqdn):] == env_fqdn:
-                print "Deleting %s" % r.name
+                print "Deleting endpoint: %s" % r.name
                 r.delete()
+
+    def list_endpoints(self, env):
+        if not self.endpoint_zone:
+            return False
+        env_fqdn = "%s.%s" % (env.get_name(), self.config.get('endpoint_zone'))
+
+        for r in self.endpoint_zone.record_sets:
+            if len(env_fqdn) <= len(r.name) and r.name[-len(env_fqdn):] == env_fqdn:
+                print "Endpoint: %s" % r.name
 
     def get_component_uptime(self, env_name, component_name):
         return self._kubectl("--namespace=%s get po --selector=app=%s|tail -n1|awk '{ print $5}'" % (env_name, component_name))
