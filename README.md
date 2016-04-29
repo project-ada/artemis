@@ -29,38 +29,39 @@ vim config.yml
 ```
 
 ## Quick start
-To create an environment from a specification:
+For available commands:
 ```
-python cli.py create <environment_name> <spec_version>
-# ie.
-python cli.py create test-env 1.0
+python cli.py help
+```
+## Examples
+Assuming we have an environment specification in ```spec_dir/1.0/```, we can create a new environment:
+```
+python cli.py create-environment --env-name=int01 --version=1.0
 ```
 
 To build environment in Kubernetes:
 ```
-python cli.py build test-env
+python cli.py provision-environment --env-name=int01
 ```
 
 To list created environments:
 ```
-python cli.py list-envs
+python cli.py list-environments
 ```
 
 To list components in an environment:
 ```
-python cli.py list-components <environment_name>
+python cli.py list-components --env-name=int01
 ```
 
-To update an image tag in a component:
+To update a component with a new image tag:
 ```
-python cli.py set-image-tag <environment_name> <component_name> <new_image_tag>
-# ie.
-python cli.py set-image-tag test-env my-nginx-rc latest
+python cli.py update-component --env-name=int01 --component-name=my-nginx-rc --image-tag=latest
 ```
 
-To destroy environment in Kubernetes:
+To destroy environment's resources in Kubernetes and Terraform:
 ```
-python cli.py teardown test-env
+python cli.py teardown-environment --env-name=int01
 ```
 
 To run a rudimentary flask-based UI:
