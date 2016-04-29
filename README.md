@@ -11,7 +11,7 @@ Artemis makes no effort to authenticate to pull the repo if spec_use_git is true
 
 Created environments are stored in ```environments/<environment_name>```.
 
-If the configuration variable ```endpoint_zone``` is defined, Artemis will attempt to create CNAME records for every Service[type=LoadBalancer] defined in the kubernetes resource files. The records will be removed on teardown. Please note that ```endpoint_zone``` must be a FQDN with the trailing dot, ie. ```endpoint_zone: "my-domain.com."```.
+If the configuration variable ```endpoint_zone``` is defined, Artemis will attempt to use the AWS credentials to create Route53 CNAME records for every Service[type=LoadBalancer] defined in the kubernetes resource files. The records will be removed on teardown. Please note that ```endpoint_zone``` must be a FQDN with the trailing dot, ie. ```endpoint_zone: "my-domain.com."```.
 
 ## Assumptions
 - Docker images are pushed to a repository with the tag ```<branch_name>-<build_number>``` and ```<branch_name>-latest```.
