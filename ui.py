@@ -1,6 +1,6 @@
 from artemis.tool import Artemis
 from threading import Thread
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 import requests
 import simplejson as json
 
@@ -67,6 +67,15 @@ def show_environment(env_name):
 def logs(env_name, pod_name):
     return render_template("stdout.html", stdout=tool._kubectl("--namespace=%s logs %s" % (env_name, pod_name)))
 
+@ui.route('/call/<method_name>')
+def call_method(method_name):
+    try:
+        method = getattr(tool, "call_" + method_name.replace("-", "_"))
+        args = { k.replace("-", "_"): v for k, v in (request.form if request.method == 'POST' else request.args.items())}
+    except:
+        return "Invalid request"
+    
+    return "<pre>%s</pre>" % str(method(**args)).replace("<","&lt;")
 
 @ui.route('/update/<env_name>/<component_name>/<image_tag>')
 def update_image(env_name, component_name, image_tag):
