@@ -4,6 +4,7 @@ import yaml
 import subprocess
 import shutil
 import route53
+import inspect
 
 
 class Artemis(object):
@@ -30,9 +31,28 @@ class Artemis(object):
             if e.get_name() == name:
                 return e
 
-    def create_environment(self, name, version):
-        if os.path.isdir("environments/" + name):
-            print "Environment %s exists already" % name
+    def get_callable_methods(self):
+        for name, data in inspect.getmembers(self):
+            if name[:5] == 'call_':
+                yield (name[5:].replace("_", "-"),
+                       [a.replace("_", "-") for a in inspect.getargspec(data).args if a is not 'self'],
+                       data.__doc__)
+
+    def call_list_environments(self, first_var, das_var=True):
+        """Return a list of environments."""
+
+        return self.environments
+
+    def call_list_components(self, env_name):
+        """Return a list of components in an environment."""
+
+        env = self.get_environment(env_name)
+        return env.get_components()
+
+    def call_create_environment(self, env_name, version):
+        """Create an environment with the specified name and version."""
+        if os.path.isdir("environments/" + env_name):
+            print "Environment %s exists already" % env_name
             return
 
         if self.config.get('spec_use_git', False):
@@ -41,12 +61,14 @@ class Artemis(object):
         if not os.path.isdir("%s/%s" % (self.config.get('spec_dir'), version)):
             print "Version %s does not exist" % version
             return
-        print "Creating environment %s, version %s" % (name, version)
-        env = Environment(name, version)
+        print "Creating environment %s, version %s" % (env_name, version)
+        env = Environment(env_name, version)
         self.environments.append(env)
         self._update_env_list()
 
-    def provision_environment(self, env):
+    def call_provision_environment(self, env_name):
+        """Do initial provisioning of an environment in Kubernetes and Terraform."""
+        env = self.get_environment(env_name)
         if self.config.get('terraform_command', False):
             print self._terraform(env, "apply")
         if self.config.get('kubectl_command', False):
@@ -60,20 +82,27 @@ class Artemis(object):
                     print "Provisioning kubernetes component %s" % c.get_name()
                     print self._kubectl("create -f -", input=open(c.get_file(), 'r'))
 
-        self.create_endpoints(env)
+        self.call_create_endpoints(env.name)
 
-    def recreate_component(self, comp):
+    def call_recreate_component(self, env_name, component_name):
+        """Delete and (re-)create and component in an environment."""
+        comp = tool.get_environment(env_name).get_component(component_name)
+
         try:
             print self._kubectl("delete -f -", input=open(comp.get_file(), 'r'))
         except:
             pass
         print self._kubectl("create -f -", input=open(comp.get_file(), 'r'))
 
-    def refresh_environment(self, env):
+    def call_refresh_environment(self, env_name):
+        """Refresh the environment specification for the specified environment."""
+        env = self.get_environment(env_name)
         self._update_env_specs()
         env.refresh_spec()
 
-    def teardown_environment(self, env):
+    def call_teardown_environment(self, env_name):
+        """Delete environment resources from Kubernetes and Terraform."""
+        env = self.get_environment(env_name)
         if self.config.get('kubectl_command', False):
             try:
                 print self._kubectl("delete namespace %s" % env.get_name())
@@ -82,9 +111,21 @@ class Artemis(object):
         if self.config.get('terraform_command', False):
             print self._terraform(env, "destroy -force")
 
-        self.remove_endpoints(env)
+        self.call_remove_endpoints(env.name)
 
-    def update_component(self, env_name, comp_name, image_tag):
+    def call_get_image_tag(self, env_name, component_name):
+        """Return the image tag for a specified component."""
+        env = tool.get_environment(env_name)
+        comp = env.get_component(component_name)
+        return comp.get_image_tag()
+
+    def call_get_image_name(self, env_name, component_name):
+        env = tool.get_environment(env_name)
+        comp = env.get_component(component_name)
+        return comp.get_image_name()
+
+    def call_update_component(self, env_name, component_name, image_tag):
+        """Update a component with a new image tag."""
         env = self.get_environment(env_name)
         comp = env.get_component(comp_name)
         comp.set_image_tag(image_tag)
@@ -92,9 +133,11 @@ class Artemis(object):
                                                                        comp.get_name(),
                                                                        comp.get_image_name()))
 
-    def create_endpoints(self, env):
+    def call_create_endpoints(self, env_name):
+        """Create DNS endpoints for an environment."""
         if not self.endpoint_zone:
             return False
+        env = self.get_environment(env_name)
         for c in env.get_components(resource_type='kube'):
             spec = c.get_spec()
             if spec['kind'] != 'Service':
@@ -109,9 +152,11 @@ class Artemis(object):
             rr, change_info = self.endpoint_zone.create_cname_record(endpoint, [elb])
             print "Created endpoint: %s" % endpoint
 
-    def remove_endpoints(self, env):
+    def call_remove_endpoints(self, env_name):
+        """Delete DNS endpoints for an environment."""
         if not self.endpoint_zone:
             return False
+        env = self.get_environment(env_name)
         env_fqdn = "%s.%s" % (env.get_name(), self.config.get('endpoint_zone'))
 
         for r in self.endpoint_zone.record_sets:
@@ -119,20 +164,16 @@ class Artemis(object):
                 print "Deleting endpoint: %s" % r.name
                 r.delete()
 
-    def list_endpoints(self, env):
+    def call_list_endpoints(self, env_name):
+        """Return a list of DNS endpoints for an environment."""
         if not self.endpoint_zone:
             return False
+        env = self.get_environment(env_name)
         env_fqdn = "%s.%s" % (env.get_name(), self.config.get('endpoint_zone'))
 
         for r in self.endpoint_zone.record_sets:
             if len(env_fqdn) <= len(r.name) and r.name[-len(env_fqdn):] == env_fqdn:
                 print "Endpoint: %s" % r.name
-
-    def get_component_uptime(self, env_name, component_name):
-        return self._kubectl("--namespace=%s get po --selector=app=%s|tail -n1|awk '{ print $5}'" % (env_name, component_name))
-
-    def get_component_pod_name(self, env_name, component_name):
-        return self._kubectl("--namespace=%s get po --selector=app=%s|tail -n1|awk '{ print $1}'" % (env_name, component_name))
 
     def __get_environment_list(self):
         return [Environment(i, self.__read_env_version(i))
@@ -146,6 +187,7 @@ class Artemis(object):
                                          "grep -v default | "
                                          "grep -v kube-system"
                                          ).split("\n") if ' ' in env]
+
     def _get_config(self, key):
         return self.config.get(key, False)
 

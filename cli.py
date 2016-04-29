@@ -2,90 +2,46 @@ import sys
 from artemis.tool import Artemis
 
 
+def usage(tool):
+    print "Usage: %s <command> [arguments]\n\nPossible commands:" % sys.argv[0]
+    for name, args, doc in tool.get_callable_methods():
+        print name
+        print "\t\t%s" % (doc if doc else "(Undocumented)")
+        print "\t\tArguments:"
+        for a in args:
+            print "\t\t--%s=<value>" % a
+
+
 def run_cli(tool):
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 2 or sys.argv[1] == 'help':
+        usage(tool)
+        return
+    try:
+        method = getattr(tool, "call_" + sys.argv[1].replace("-", "_"))
+    except:
+        print "Command not found: %s\n" % sys.argv[1]
+        usage(tool)
         return
 
-    if sys.argv[1] == 'list-envs':
-        envs = tool.get_environments()
-        if not len(envs):
-            print "No environments."
-            return
+    args = {}
+    prevarg = ""
+    for a in sys.argv[2:]:
+        if a[:2] != '--':
+            if prevarg == "":
+                print "Invalid argument: %s\n" % a
+                print usage(tool)
+                return
+            args[prevarg] = a
+        else:
+            if '=' in a:
+                arg_name, arg_value = a[2:].split('=')
+            else:
+                arg_name = a[2:]
+                arg_value = True
+            args[arg_name.replace("-", "_")] = arg_value
+            prevarg = arg_name.replace("-", "_")
 
-        print "Created environments:"
-        for e in envs:
-            print e
-
-    if sys.argv[1] == 'list-components':
-        env = tool.get_environment(sys.argv[2])
-        if not env:
-            print "No such environment"
-            return
-        print "Components in %s:" % env.get_name()
-        for c in env.get_components():
-            print c
-
-    if sys.argv[1] == 'create':
-        tool.create_environment(sys.argv[2], sys.argv[3])
-
-    if sys.argv[1] == 'tf':
-        tool._terraform(' '.join(sys.argv[2:]))
-
-    if sys.argv[1] == 'build':
-        env = tool.get_environment(sys.argv[2])
-        print "Building %s" % env.get_name()
-        tool.provision_environment(env)
-
-    if sys.argv[1] == 'refresh-spec':
-        env = tool.get_environment(sys.argv[2])
-        print "Calling refresh on %s" % env.get_name()
-        tool.refresh_environment(env)
-
-    if sys.argv[1] == 'teardown':
-        env = tool.get_environment(sys.argv[2])
-        print "Tearing down %s" % env.get_name()
-        tool.teardown_environment(env)
-
-    if sys.argv[1] == 'get-image-tag':
-        env = tool.get_environment(sys.argv[2])
-        comp = env.get_component(sys.argv[3])
-        print "Tag for %s in %s: %s" % (comp.get_name(),
-                                        env.get_name(),
-                                        comp.get_image_tag())
-
-    if sys.argv[1] == 'recreate':
-        env = tool.get_environment(sys.argv[2])
-        component = env.get_component(sys.argv[3])
-        tool.recreate_component(component)
-
-    if sys.argv[1] == 'create-endpoints':
-        env = tool.get_environment(sys.argv[2])
-        tool.create_endpoints(env)
-
-    if sys.argv[1] == 'list-endpoints':
-        env = tool.get_environment(sys.argv[2])
-        tool.list_endpoints(env)
-
-    if sys.argv[1] == 'remove-endpoints':
-        env = tool.get_environment(sys.argv[2])
-        tool.remove_endpoints(env)
-
-    if sys.argv[1] == 'get-image-name':
-        env = tool.get_environment(sys.argv[2])
-        comp = env.get_component(sys.argv[3])
-        print "Name for %s in %s: %s" % (comp.get_name(),
-                                         env.get_name(),
-                                         comp.get_image_name())
-
-    if sys.argv[1] == 'set-image-tag':
-        env = tool.get_environment(sys.argv[2])
-        comp = env.get_component(sys.argv[3])
-        print "Old tag: %s" % comp.get_image_tag()
-        comp.set_image_tag(sys.argv[4])
-        print "New tag: %s" % comp.get_image_tag()
-        tool._kubectl("--namespace=%s rolling-update %s --image=%s" % (env.get_name(),
-                                                                       comp.get_name(),
-                                                                       comp.get_image_name()))
+    print method(**args)
 
 
 tool = Artemis(config_file='config.yml')
