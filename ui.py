@@ -26,8 +26,8 @@ def call_image_update(env_name, component_name, image_tag):
     tool.update_component(env_name, component_name, image_tag)
 
 @async
-def call_recreate_component(component):
-    tool.recreate_component(component)
+def call_recreate_component(env, component):
+    tool.call_recreate_component(env, component)
 
 @ui.route('/')
 def list_environments():
@@ -104,7 +104,7 @@ def new_image_version(image_vendor, image_name, branch_name, build_number):
             if component_branch != branch_name or component_tag != 'latest':
                 continue
             print "Updating %s %s with %s" % (env.get_name(), component.get_name(), component.get_image_tag())
-            call_recreate_component(component)
+            call_recreate_component(env.get_name(), component.get_name())
             updated_environments.append(env.get_name())
 
     if tool._get_config('slack_notification_webhook') and updated_environments:
