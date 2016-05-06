@@ -87,7 +87,7 @@ def update_image(env_name, component_name, image_tag):
 def recreate_component(env_name, component_name):
     env = tool.get_environment(env_name)
     component = env.get_component(component_name)
-    tool.recreate_component(component)
+    tool.call_recreate_component(env_name, component_name)
     return "Recreated"
 
 @ui.route('/newimage/<image_vendor>/<image_name>/<branch_name>/<build_number>')
