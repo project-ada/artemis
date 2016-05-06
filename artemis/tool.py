@@ -86,7 +86,7 @@ class Artemis(object):
 
     def call_recreate_component(self, env_name, component_name):
         """Delete and (re-)create and component in an environment."""
-        comp = tool.get_environment(env_name).get_component(component_name)
+        comp = self.get_environment(env_name).get_component(component_name)
 
         try:
             print self._kubectl("delete -f -", input=open(comp.get_file(), 'r'))
@@ -115,12 +115,12 @@ class Artemis(object):
 
     def call_get_image_tag(self, env_name, component_name):
         """Return the image tag for a specified component."""
-        env = tool.get_environment(env_name)
+        env = self.get_environment(env_name)
         comp = env.get_component(component_name)
         return comp.get_image_tag()
 
     def call_get_image_name(self, env_name, component_name):
-        env = tool.get_environment(env_name)
+        env = self.get_environment(env_name)
         comp = env.get_component(component_name)
         return comp.get_image_name()
 
