@@ -38,7 +38,7 @@ class Artemis(object):
                        [a.replace("_", "-") for a in inspect.getargspec(data).args if a is not 'self'],
                        data.__doc__)
 
-    def call_list_environments(self, first_var, das_var=True):
+    def call_list_environments(self):
         """Return a list of environments."""
 
         return self.environments
