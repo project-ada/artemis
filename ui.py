@@ -63,10 +63,6 @@ def show_environment(env_name):
                            env=env)
 
 
-@ui.route('/logs/<env_name>/<pod_name>')
-def logs(env_name, pod_name):
-    return render_template("stdout.html", stdout=tool._kubectl("--namespace=%s logs %s" % (env_name, pod_name)))
-
 @ui.route('/call/<method_name>')
 def call_method(method_name):
     try:
