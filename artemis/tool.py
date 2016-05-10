@@ -334,6 +334,9 @@ class Environment(object):
     def get_env_dir(self):
         return "environments/%s" % self.name
 
+    def __repr__(self):
+        return self.__str__()
+
     def __str__(self):
         return self.name
 
@@ -406,5 +409,8 @@ class Component(object):
         with open(self.file, 'w') as f:
             f.write(yaml.dump(spec))
 
+    def __repr__(self):
+        return self.__str__()
+
     def __str__(self):
-        return self.name + " [" + self.type + "]: " + self.file
+        return self.name + " [" + self.type + "]"
