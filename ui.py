@@ -71,7 +71,7 @@ def logs(env_name, pod_name):
 def call_method(method_name):
     try:
         method = getattr(tool, "call_" + method_name.replace("-", "_"))
-        args = { k.replace("-", "_"): v for k, v in (request.form if request.method == 'POST' else request.args.items())}
+        args = { k: v for k, v in (request.form if request.method == 'POST' else request.args.items())}
     except:
         return "Invalid request"
     
