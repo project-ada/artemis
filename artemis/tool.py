@@ -175,6 +175,17 @@ class Artemis(object):
             if len(env_fqdn) <= len(r.name) and r.name[-len(env_fqdn):] == env_fqdn:
                 print "Endpoint: %s" % r.name
 
+    def call_get_logs(self, env_name, component_name, pod_name=None):
+        """Return logs for a pod in a component."""
+        if pod_name:
+            return self._kubectl("--namespace=%s logs %s" % (env_name, pod_name))
+        pods = self._kubectl("--namespace=%s get po -l app=%s | awk '{print $1}'" % (env_name, component_name)).split("\n")[1:-1]
+        if len(pods) == 1:
+            return self._kubectl("--namespace=%s logs %s" % (env_name, pods[0]))
+        if len(pods) < 1:
+            return "No pods found for component %s in %s" % (component_name, env_name)
+        return "Component %s has %d pods, please specify explicitly with --pod-name\nPods: %s" % (component_name, len(pods), ", ".join(pods))
+
     def __get_environment_list(self):
         return [Environment(i, self.__read_env_version(i))
                 for i in os.listdir("environments/")]
