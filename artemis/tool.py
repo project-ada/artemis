@@ -188,6 +188,13 @@ class Artemis(object):
             return "No pods found for component %s in %s" % (component_name, env_name)
         return "Component %s has %d pods, please specify explicitly with --pod-name\nPods: %s" % (component_name, len(pods), ", ".join(pods))
 
+    def call_get_spec_version(self, env_name):
+        """Returns the specification version of a running environment."""
+        env = self.get_environment(env_name)
+        if self.config.get('spec_use_git', False):
+            return env.get_version() + ": " + subprocess.check_output("cd %s && git --no-pager log -1 --format='%%an at %%ci %%s'" % self.config.get('spec_dir'), shell=True)
+        return env.get_version()
+
     def __get_environment_list(self):
         return [Environment(i, self.__read_env_version(i))
                 for i in os.listdir("environments/")]

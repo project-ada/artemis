@@ -60,7 +60,7 @@ def show_environment(env_name):
 
     return render_template("show_environment.html",
                            components=components,
-                           env=env)
+                           env=env, spec_version=tool.call_get_spec_version(env_name=env_name))
 
 
 @ui.route('/call/<method_name>')
