@@ -99,6 +99,7 @@ class Artemis(object):
         env = self.get_environment(env_name)
         self._update_env_specs()
         env.refresh_spec()
+        return self.call_get_spec_version(env_name)
 
     def call_teardown_environment(self, env_name):
         """Delete environment resources from Kubernetes and Terraform."""

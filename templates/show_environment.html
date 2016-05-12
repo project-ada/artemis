@@ -5,8 +5,8 @@
 </head>
 <body>
 <h1>Components in {{ env.get_name() }}</h1>
-Environment specification {{ spec_version }} 
-<input type="button" onclick="fetchival('/call/refresh-environment?env_name={{ env.name }}'); location.reload()" value="Refresh environment specifications" /><br /><br />
+Environment specification {{ spec_version }}<br />
+<a href="/call/refresh-environment?env_name={{ env.name }}" target="_blank">Refresh environment specifications</a><br /><br />
 
 <table>
 <tr style="font-weight:bold">
