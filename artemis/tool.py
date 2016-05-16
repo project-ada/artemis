@@ -160,6 +160,14 @@ class Artemis(object):
             rr, change_info = self.endpoint_zone.create_cname_record(endpoint, [elb])
             print "Created endpoint: %s" % endpoint
 
+        if self.config.get('terraform_command', False):
+            for o in self._terraform(env, "output", add_credentials=False).split("\n"):
+                if len(o) > 1:
+                        name, target = [s.strip() for s in o.split('=')]
+                        endpoint = "%s.%s.%s" % (name, env.get_name(), self.config.get('endpoint_zone'))
+                        rr, change_info = self.endpoint_zone.create_cname_record(endpoint, [target])
+                        print "Created endpoint: %s" % endpoint
+
     def call_remove_endpoints(self, env_name):
         """Delete DNS endpoints for an environment."""
         if not self.endpoint_zone:
