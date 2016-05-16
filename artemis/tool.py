@@ -66,11 +66,14 @@ class Artemis(object):
         self.environments.append(env)
         self._update_env_list()
 
-    def call_provision_environment(self, env_name):
-        """Do initial provisioning of an environment in Kubernetes and Terraform."""
+    def call_provision_terraform(self, env_name):
+        """Call terraform apply on the environment."""
         env = self.get_environment(env_name)
         if self.config.get('terraform_command', False):
             print self._terraform(env, "apply")
+
+    def call_provision_kubernetes(self, env_name):
+        """Create Kubernetes components according to environment specification."""
         if self.config.get('kubectl_command', False):
             print self._kubectl("create namespace %s" % env.get_name())
 
@@ -82,6 +85,10 @@ class Artemis(object):
                     print "Provisioning kubernetes component %s" % c.get_name()
                     print self._kubectl("create -f -", input=open(c.get_file(), 'r'))
 
+    def call_provision_environment(self, env_name):
+        """Do initial provisioning of an environment in Kubernetes and Terraform."""
+        self.call_provision_terraform(env_name)
+        self.call_provision_kubernetes(env_name)
         self.call_create_endpoints(env.name)
 
     def call_recreate_component(self, env_name, component_name):
