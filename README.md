@@ -16,6 +16,7 @@ If the configuration variable ```endpoint_zone``` is defined, Artemis will attem
 ## Notes
 - Docker images are pushed to a repository with the tag ```<branch_name>-<build_number>``` and ```<branch_name>-latest```.
 - Currently, the only supported Kubernetes 'components' are ReplicationControllers and Services
+- Terraform state *must* be stored remotely, local .tfstate files will get wiped when refreshing environment specifications. See https://www.terraform.io/docs/state/remote/index.html
 - Create Terraform outputs for endpoints you wish to expose (and define ```endpoint_zone``` in the config)
 
 ## Installation
