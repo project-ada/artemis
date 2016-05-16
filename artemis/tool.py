@@ -294,7 +294,6 @@ class Environment(object):
 
     def __make_spec(self):
         preserved_component_images = []
-        terraform_state = False
 
         if os.path.isdir("environments/" + self.name):
             # we are refreshing the environment specs
