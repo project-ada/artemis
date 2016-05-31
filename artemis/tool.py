@@ -74,6 +74,7 @@ class Artemis(object):
 
     def call_provision_kubernetes(self, env_name):
         """Create Kubernetes components according to environment specification."""
+        env = self.get_environment(env_name)
         if self.config.get('kubectl_command', False):
             print self._kubectl("create namespace %s" % env.get_name())
 
@@ -306,8 +307,6 @@ class Environment(object):
                         'image': c.get_image_basename(),
                         'image_tag': c.get_image_tag()
                         })
-
-            print "Preserved image tags: %s" % preserved_component_images
             shutil.rmtree(self.get_env_dir())
         else:
             print "Copying environment spec from %s" % self.get_skel_dir()
