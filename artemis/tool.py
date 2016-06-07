@@ -90,7 +90,7 @@ class Artemis(object):
         """Do initial provisioning of an environment in Kubernetes and Terraform."""
         self.call_provision_terraform(env_name)
         self.call_provision_kubernetes(env_name)
-        self.call_create_endpoints(env.name)
+        self.call_create_endpoints(env_name)
 
     def call_recreate_component(self, env_name, component_name):
         """Delete and (re-)create and component in an environment."""
