@@ -24,7 +24,7 @@ class Artemis(object):
         else:
             self.endpoint_zone = False
 
-    def valid_ip(address):
+    def valid_ip(self, address):
         try:
             socket.inet_aton(address)
             return True
@@ -166,7 +166,7 @@ class Artemis(object):
                 continue
             elb = self._kubectl("--namespace=%s describe svc %s|grep Ingress|awk '{print $3}'" % (env.get_name(), spec['metadata']['name']))
             endpoint = "%s.%s.%s" % (spec['metadata']['name'], env.get_name(), self.config.get('endpoint_zone'))
-            if valid_ip(elb):
+            if self.valid_ip(elb):
                 rr, change_info = self.endpoint_zone.create_a_record(endpoint, [elb])
             else:
                 rr, change_info = self.endpoint_zone.create_cname_record(endpoint, [elb])
