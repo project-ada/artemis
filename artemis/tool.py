@@ -213,8 +213,13 @@ class Artemis(object):
         return env.get_version()
 
     def __get_environment_list(self):
-        return [Environment(i, self.__read_env_version(i))
-                for i in os.listdir("environments/")]
+        env_list = []
+
+        for i in os.listdir("environments/"):
+            if not os.path.isdir("environments/" + i):
+                continue
+            env_list.append(Environment(i, self.__read_env_version(i)))
+        return env_list
 
     def __get_kube_environment_list(self):
         return [{'name': env.split(" ")[0], 'version': env.split(" ")[1]}
