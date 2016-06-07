@@ -5,6 +5,7 @@ import subprocess
 import shutil
 import route53
 import inspect
+import socket
 
 
 class Artemis(object):
@@ -22,6 +23,13 @@ class Artemis(object):
                     self.endpoint_zone = conn.get_hosted_zone_by_id(z.id)
         else:
             self.endpoint_zone = False
+
+    def valid_ip(self, address):
+        try:
+            socket.inet_aton(address)
+            return True
+        except:
+            return False
 
     def get_environments(self):
         return self.environments
@@ -158,7 +166,10 @@ class Artemis(object):
                 continue
             elb = self._kubectl("--namespace=%s describe svc %s|grep Ingress|awk '{print $3}'" % (env.get_name(), spec['metadata']['name']))
             endpoint = "%s.%s.%s" % (spec['metadata']['name'], env.get_name(), self.config.get('endpoint_zone'))
-            rr, change_info = self.endpoint_zone.create_cname_record(endpoint, [elb])
+            if self.valid_ip(elb):
+                rr, change_info = self.endpoint_zone.create_a_record(endpoint, [elb])
+            else:
+                rr, change_info = self.endpoint_zone.create_cname_record(endpoint, [elb])
             print "Created endpoint: %s" % endpoint
 
         if self.config.get('terraform_command', False):
