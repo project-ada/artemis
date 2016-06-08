@@ -144,7 +144,7 @@ class Artemis(object):
     def call_update_component(self, env_name, component_name, image_tag):
         """Update a component with a new image tag."""
         env = self.get_environment(env_name)
-        comp = env.get_component(comp_name)
+        comp = env.get_component(component_name)
         comp.set_image_tag(image_tag)
         self._kubectl("--namespace=%s rolling-update %s --image=%s" % (env.get_name(),
                                                                        comp.get_name(),
