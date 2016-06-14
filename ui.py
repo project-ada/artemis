@@ -4,7 +4,7 @@ from flask import Flask, render_template, request
 import requests
 import simplejson as json
 import logging
-from logging.handlers import RotatingFileHandler
+from logging.handlers import TimedRotatingFileHandler
 
 
 def async(f):
@@ -117,7 +117,7 @@ def new_image_version(image_vendor, image_name, branch_name, build_number):
     return "OK"
 
 if __name__ == '__main__':
-    handler = RotatingFileHandler('artemis-ui.log', maxBytes=20971520, backupCount=5)
+    handler = TimedRotatingFileHandler('artemis-ui.log', when='d', interval=1, backupCount=5)
     handler.setLevel(logging.INFO)
     ui.logger.addHandler(handler)
     ui.run(host='0.0.0.0')
