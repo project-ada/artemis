@@ -145,9 +145,10 @@ class Artemis(object):
         env = self.get_environment(env_name)
         comp = env.get_component(component_name)
         comp.set_image_tag(image_tag)
-        self._kubectl("--namespace=%s rolling-update %s --image=%s" % (env.get_name(),
-                                                                       comp.get_name(),
-                                                                       comp.get_image_name()))
+        self.call_recreate_component(env_name, component_name)
+#        self._kubectl("--namespace=%s rolling-update %s --image=%s" % (env.get_name(),
+#                                                                       comp.get_name(),
+#                                                                       comp.get_image_name()))
 
     def call_create_endpoints(self, env_name):
         """Create DNS endpoints for an environment."""
