@@ -25,7 +25,7 @@ ui.config.update(
 
 @async
 def call_image_update(env_name, component_name, image_tag):
-    tool.update_component(env_name, component_name, image_tag)
+    tool.call_update_component(env_name, component_name, image_tag)
 
 @async
 def call_recreate_component(env, component):
