@@ -85,6 +85,7 @@ class Artemis(object):
         env = self.get_environment(env_name)
         if self.config.get('kubectl_command', False):
             print self._kubectl("create namespace %s" % env.get_name())
+            print self._kubectl("label namespace %s env_version=%s" % (env.get_name(), env.get_version()))
 
             for cmd in self.config['kubeinit']:
                 print self._kubectl("--namespace %s %s" % (env.get_name(), cmd))
@@ -146,9 +147,6 @@ class Artemis(object):
         comp = env.get_component(component_name)
         comp.set_image_tag(image_tag)
         self.call_recreate_component(env_name, component_name)
-#        self._kubectl("--namespace=%s rolling-update %s --image=%s" % (env.get_name(),
-#                                                                       comp.get_name(),
-#                                                                       comp.get_image_name()))
 
     def call_create_endpoints(self, env_name):
         """Create DNS endpoints for an environment."""
@@ -300,6 +298,10 @@ class Environment(object):
             if c.get_name() == name:
                 return c
 
+    def is_auto_deployed(self):
+        file_path = os.path.join(self.get_env_dir(), 'AUTO')
+        return os.path.isfile(file_path)
+
     def refresh_spec(self):
         self.__make_spec()
 
@@ -355,7 +357,7 @@ class Environment(object):
     def __read_spec(self):
         for i in os.listdir(self.get_env_dir()):
             file_path = os.path.join(self.get_env_dir(), i)
-            if not os.path.isfile(file_path) or i == 'VERSION':
+            if not os.path.isfile(file_path) or i == 'VERSION' or i == 'AUTO':
                 continue
             self.components.append(self.__gen_component(file_path))
 

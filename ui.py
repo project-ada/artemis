@@ -92,18 +92,19 @@ def recreate_component(env_name, component_name):
 def new_image_version(image_vendor, image_name, branch_name, build_number):
     updated_environments = []
     for env in tool.get_environments():
-        for component in env.get_components(resource_type='kube'):
-            if component.get_image_basename() != image_vendor + "/" + image_name:
-                continue
-            try:
-                component_branch, component_tag = component.get_image_tag().split("-")
-            except:
-                continue
-            if component_branch != branch_name or component_tag != 'latest':
-                continue
-            print "Updating %s %s with %s" % (env.get_name(), component.get_name(), component.get_image_tag())
-            call_recreate_component(env.get_name(), component.get_name())
-            updated_environments.append(env.get_name())
+        if env.is_auto_deployed():
+            for component in env.get_components(resource_type='kube'):
+                if component.get_image_basename() != image_vendor + "/" + image_name:
+                    continue
+                try:
+                    component_branch, component_tag = component.get_image_tag().split("-")
+                except:
+                    continue
+                if component_branch == branch_name and component_tag != build_number:
+	            image_tag = '-'.join([branch_name, build_number])
+                    print "Updating %s %s with %s" % (env.get_name(), component.get_name(), component.get_image_tag())
+		    call_image_update(env.get_name(), component.get_name(), image_tag)
+                    updated_environments.append(env.get_name())
 
     if tool._get_config('slack_notification_webhook') and updated_environments:
         msg = {
