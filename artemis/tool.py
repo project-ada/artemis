@@ -243,7 +243,7 @@ class Artemis(object):
                 dest_tags[component.get_name()] = component.get_image_tag()
             for name in dest_tags.keys():
                 if source_tags[name] != dest_tags[name]:
-                    to_update[name] = {source: source_tags[name], dest: dest_tags[name]}
+                    to_update[name] = {'source': source_tags[name], 'dest': dest_tags[name]}
         else:
             to_update['error'] = 'Different components sets in the source and the destination environments'
         return to_update
