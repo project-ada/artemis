@@ -122,7 +122,7 @@ def deploy_form():
     return render_template("deploy_form.html", envs=tool.get_environments())
 
 @ui.route('/deploycheck/<source>/<dest>')
-def deploy_final():
+def deploy_final(source, dest):
     return render_template("deploy_final.html", source_env=source, dest_env=dest, components=tool.call_deploy_diff(source, dest))
 
 @ui.route('/deploy/<source>/<dest>')
