@@ -228,9 +228,15 @@ class Artemis(object):
         to_update = {}
         s_env = self.get_environment(source_env_name)
         d_env = self.get_environment(dest_env_name)
+        s_names = []
+        d_names = []
         s_components = s_env.get_components(resource_type='kube')
         d_components = d_env.get_components(resource_type='kube')
-        if sorted(s_components) == sorted(d_components):
+        for component in s_components:
+            s_names.append(component.get_name())
+        for component in d_components:
+            d_names.append(component.get_name())
+        if sorted(s_names) == sorted(d_names):
             for component in s_components:
                 source_tags[component.get_name()] = component.get_image_tag()
             for component in d_components:
