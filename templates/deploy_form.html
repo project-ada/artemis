@@ -1,7 +1,13 @@
 <html>
 <head>
 <title>Artemis</title>
-<script type="text/javascript" src="https://s3-eu-west-1.amazonaws.com/files.artirix.com/fetchival.js"></script>
+<script>
+	document.getElementById('this-guy').addEventListener('click', function() {
+		const source = document.getElementById('source-env').value;
+		const dest = document.getElementById('dest-env').value;
+		window.location.href = `/deploycheck/${source}/${dest}`;
+	})
+</script>
 </head>
 <body>
 <h1>Deploy environment</h1>
@@ -16,8 +22,7 @@
 	<td><input type="text" name="Source env" value="int" id="source-env"></td>
 	<td> -> </td>
 	<td><input type="text" name="Destination env" id="dest-env"></td>
-	<td><input type="button" onclick="fetchival(
-	    '/deploycheck/'+document.getElementById('source-env').value+'/'+document.getElementById('dest-env').value).get();" value="Check"></td>
+	<td><input type="button" id="this-guy"></td>
 </tr>
 </table>
 
