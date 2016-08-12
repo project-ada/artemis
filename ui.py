@@ -121,7 +121,7 @@ def new_image_version(image_vendor, image_name, branch_name, build_number):
 def deploy_form():
     return render_template("deploy_form.html", envs=tool.get_environments())
 
-@ui.route('/deploycheck/<source>/<dest>')
+@ui.route('/deploycheck/<source>/<dest>/')
 def deploy_final(source, dest):
     return render_template("deploy_final.html", source_env=source, dest_env=dest, components=tool.call_deploy_diff(source, dest))
 
