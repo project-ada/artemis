@@ -2,13 +2,6 @@
 <html>
 	<head>
 		<title>Artemis</title>
-		<script>
-			document.getElementById('this-guy').addEventListener('click', function() {
-				const source = document.getElementById('source-env').value;
-				const dest = document.getElementById('dest-env').value;
-				window.location.href = `/deploycheck/${source}/${dest}`;
-			})
-		</script>
 	</head>
 	<body>
 		<h1>Deploy environment</h1>
@@ -32,4 +25,11 @@
 		<li>{{ e.get_name() }}</li>
 		{% endfor %}
 	</body>
+	<script>
+		document.getElementById('this-guy').addEventListener('click', function() {
+			const source = document.getElementById('source-env').value;
+			const dest = document.getElementById('dest-env').value;
+			window.location.href = `/deploycheck/${source}/${dest}`;
+		})
+	</script>
 </html>
