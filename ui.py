@@ -126,7 +126,7 @@ def deploy_final(source, dest):
     return render_template("deploy_final.html", source_env=source, dest_env=dest, components=tool.call_deploy_diff(source, dest))
 
 @ui.route('/deploy/<source>/<dest>')
-def deploy_env():
+def deploy_env(source, dest):
     tool.call_deploy_from_to(source, dest)
     return "Deploying"
 
