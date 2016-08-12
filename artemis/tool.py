@@ -244,8 +244,10 @@ class Artemis(object):
             for name in dest_tags.keys():
                 if source_tags[name] != dest_tags[name]:
                     to_update[name] = {'source': source_tags[name], 'dest': dest_tags[name]}
+            if to_update == []:
+                to_update['error'] = 'Nothing to deploy, the environments are same.'
         else:
-            to_update['error'] = 'Different components sets in the source and the destination environments'
+            to_update['error'] = 'Different components sets in the source and the destination environments.'
         return to_update
 
     def call_deploy_from_to(self, source_env_name, dest_env_name):
