@@ -221,6 +221,33 @@ class Artemis(object):
             return env.get_version() + ": " + subprocess.check_output("cd %s && git --no-pager log -1 --format='%%an at %%ci %%s'" % self.config.get('spec_dir'), shell=True)
         return env.get_version()
 
+    def call_deploy_diff(self, source_env_name, dest_env_name):
+        """Show components which are different between source and destination environments."""
+        source_tags = {}
+        dest_tags = {}
+        to_update = {}
+        s_env = self.get_environment(source_env_name)
+        d_env = self.get_environment(dest_env_name)
+        s_components = s_env.get_components(resource_type='kube')
+        d_components = d_env.get_components(resource_type='kube')
+        if sorted(s_components) == sorted(d_components):
+            for component in s_components:
+                source_tags[component.get_name()] = component.get_image_tag()
+            for component in d_components:
+                dest_tags[component.get_name()] = component.get_image_tag()
+            for name in dest_tags.keys():
+                if source_tags[name] != dest_tags[name]:
+                    to_update[name] = {source: source_tags[name], dest: dest_tags[name]}
+        else:
+            to_update['error'] = 'Different components sets in the source and the destination environments'
+        return to_update
+
+    def call_deploy_from_to(self, source_env_name, dest_env_name):
+        """Deploy components where tags are different between environments"""
+        to_update = self.call_deploy_diff(source_env_name, dest_env_name)
+        for component in to_update.keys():
+            self.call_update_component(dest_env_name, component, to_update[component]['source'])
+
     def __get_environment_list(self):
         env_list = []
 

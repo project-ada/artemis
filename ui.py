@@ -117,6 +117,19 @@ def new_image_version(image_vendor, image_name, branch_name, build_number):
         print r
     return "OK"
 
+@ui.route('/deploycheck/')
+def deploy_form():
+    return render_template("deploy_form.html", envs=tool.get_environments())
+
+@ui.route('/deploycheck/<source>/<dest>')
+def deploy_final():
+    return render_template("deploy_final.html", source_env=source, dest_env=dest, components=tool.call_deploy_diff(source, dest))
+
+@ui.route('/deploy/<source>/<dest>')
+def deploy_env():
+    tool.call_deploy_from_to(source, dest)
+    return "Deploying"
+
 if __name__ == '__main__':
     handler = TimedRotatingFileHandler('artemis-ui.log', when='d', interval=1, backupCount=5)
     handler.setLevel(logging.INFO)

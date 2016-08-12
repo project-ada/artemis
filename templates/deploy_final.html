@@ -1,0 +1,35 @@
+<html>
+<head>
+<title>Artemis</title>
+<script type="text/javascript" src="https://s3-eu-west-1.amazonaws.com/files.artirix.com/fetchival.js"></script>
+</head>
+<body>
+<h1>Deployment from {{ source_env }} to {{ dest_env }}</h1>
+
+{% if 'error' in components.keys() %}
+
+Unable to deploy: {{ components['error'] }}
+
+{% else %}
+Components to update
+<br></br>
+<table>
+<tr style="font-weight:bold">
+	<td> Component name</td>
+	<td>Source tag</td>
+	<td>Dest tag</td>
+</tr>
+{% for c in components.keys() %}
+<tr>
+	<td>{{ c }}</td>
+	<td>{{ components[c]['source'] }}</td>
+	<td>{{ components[c]['dest'] }}</td>
+</tr>
+{% endfor %}
+</table>
+
+<input type="button" onclick="fetchival('/deploy/{{ source-env }}/{{ dest-env }}').get(); alert('Deploying...');" value="Deploy" />
+
+{% endif %}
+</body>
+</html>

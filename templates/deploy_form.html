@@ -1,0 +1,30 @@
+<html>
+<head>
+<title>Artemis</title>
+<script type="text/javascript" src="https://s3-eu-west-1.amazonaws.com/files.artirix.com/fetchival.js"></script>
+</head>
+<body>
+<h1>Deploy environment</h1>
+
+<table>
+<tr style="font-weight:bold">
+	<td>Source env</td>
+	<td colspan="1"></td>
+	<td>Destination env</td>
+</tr>
+<tr>
+	<td><input type="text" name="Source env" value="int" id="source-env"></td>
+	<td> -> </td>
+	<td><input type="text" name="Destination env" id="dest-env"></td>
+	<td><input type="button" onclick="fetchival(
+	    '/deploycheck/'+document.getElementById('source-env').value+'/'+document.getElementById('dest-env').value).get();
+	    alert('Checking...');" value="Check"></td>
+</tr>
+</table>
+
+<h3>Available environments</h3>
+{% for e in envs %}
+<li>{{ e.get_name() }}</li>
+{% endfor %}
+</body>
+</html>
