@@ -348,10 +348,13 @@ class Environment(object):
 
     def __make_spec(self):
         preserved_component_images = []
+        is_auto = False
 
         if os.path.isdir("environments/" + self.name):
             # we are refreshing the environment specs
             print "Refreshing environment spec from %s" % self.get_skel_dir()
+            if self.is_auto_deployed:
+                is_auto = True
 
             for c in self.get_components(resource_type='kube'):
                 if c.get_image_basename():
@@ -375,11 +378,14 @@ class Environment(object):
                 for line in s:
                     t.write(line.replace("%%ENV_NAME%%", self.name))
 
-            with open(os.path.join(self.get_env_dir(), "VERSION"), 'w') as f:
-                f.write(self.version + "\n")
-
             comp = self.__gen_component(env_file_path)
             self.components.append(comp)
+
+        with open(os.path.join(self.get_env_dir(), "VERSION"), 'w') as f:
+            f.write(self.version + "\n")
+
+        if is_auto:
+            open(os.path.join(self.get_env_dir(), "AUTO"), 'w').close()
 
         for p in preserved_component_images:
             c = self.get_component(p['name'])
