@@ -3,7 +3,7 @@ import os
 import yaml
 import subprocess
 import shutil
-import route53
+import boto3
 import inspect
 import socket
 
@@ -13,14 +13,14 @@ class Artemis(object):
         with open(config_file, 'r') as f:
             self.config = yaml.load(f)
         self._update_env_list()
-        if self.config.get('endpoint_zone', False):
-            conn = route53.connect(
+        self.conn = boto3.client('route53',
                 aws_access_key_id=self.config.get('aws_access_key'),
                 aws_secret_access_key=self.config.get('aws_secret_key')
                 )
-            for z in conn.list_hosted_zones():
-                if z.name == self.config.get('endpoint_zone'):
-                    self.endpoint_zone = conn.get_hosted_zone_by_id(z.id)
+        if self.config.get('endpoint_zone', False):
+            for z in self.conn.list_hosted_zones()['HostedZones']:
+                if z['Name'] == self.config.get('endpoint_zone'):
+                    self.endpoint_zone = z['Id']
         else:
             self.endpoint_zone = False
 
@@ -137,6 +137,7 @@ class Artemis(object):
         return comp.get_image_tag()
 
     def call_get_image_name(self, env_name, component_name):
+        """Return the image name for a specified component."""
         env = self.get_environment(env_name)
         comp = env.get_component(component_name)
         return comp.get_image_name()
@@ -148,11 +149,14 @@ class Artemis(object):
         comp.set_image_tag(image_tag)
         self.call_recreate_component(env_name, component_name)
 
-    def call_create_endpoints(self, env_name):
-        """Create DNS endpoints for an environment."""
+    def call_update_endpoints(self, env_name):
+        """Update (or create) DNS endpoints for an environment."""
         if not self.endpoint_zone:
             return False
+
         env = self.get_environment(env_name)
+        existing_endpoints = self.__call_get_existing_endpoints(env_name)
+
         for c in env.get_components(resource_type='kube'):
             spec = c.get_spec()
             if spec['kind'] != 'Service':
@@ -164,31 +168,35 @@ class Artemis(object):
                 continue
             elb = self._kubectl("--namespace=%s describe svc %s|grep Ingress|awk '{print $3}'" % (env.get_name(), spec['metadata']['name']))
             endpoint = "%s.%s.%s" % (spec['metadata']['name'], env.get_name(), self.config.get('endpoint_zone'))
+           
             if self.valid_ip(elb):
-                rr, change_info = self.endpoint_zone.create_a_record(endpoint, [elb])
-            else:
-                rr, change_info = self.endpoint_zone.create_cname_record(endpoint, [elb])
-            print "Created endpoint: %s" % endpoint
-
-        if self.config.get('terraform_command', False):
-            for o in self._terraform(env, "output", add_credentials=False).split("\n"):
-                if len(o) > 1:
-                        name, target = [s.strip() for s in o.split('=')]
-                        endpoint = "%s.%s.%s" % (name, env.get_name(), self.config.get('endpoint_zone'))
-                        rr, change_info = self.endpoint_zone.create_cname_record(endpoint, [target])
-                        print "Created endpoint: %s" % endpoint
+                try:
+                    self.__update_dns_record(endpoint, elb)
+                    print "Updated endpoint: %s" % endpoint
+                except:
+                    print "Failed to create endpoint: %s" % endpoint
 
     def call_remove_endpoints(self, env_name):
         """Delete DNS endpoints for an environment."""
         if not self.endpoint_zone:
             return False
         env = self.get_environment(env_name)
-        env_fqdn = "%s.%s" % (env.get_name(), self.config.get('endpoint_zone'))
+        existing_endpoints = self.__call_get_existing_endpoints(env_name)
 
-        for r in self.endpoint_zone.record_sets:
-            if len(env_fqdn) <= len(r.name) and r.name[-len(env_fqdn):] == env_fqdn:
-                print "Deleting endpoint: %s" % r.name
-                r.delete()
+        for record in existing_endpoints.keys():
+            self.__delete_dns_record(record, existing_endpoints[record])
+
+    def __call_get_existing_endpoints(self, env_name):
+        """Return the list of configured DNS records."""
+        env = self.get_environment(env_name)
+        env_fqdn = "%s.%s" % (env.get_name(), self.config.get('endpoint_zone'))
+        existing_endpoints = {}
+        records = self.conn.list_resource_record_sets(HostedZoneId=self.endpoint_zone)
+        for record in records['ResourceRecordSets']:
+            if record['Type'] =='A':
+                if env_fqdn in record['Name']:
+                    existing_endpoints[record['Name']] = record['ResourceRecords'][0]['Value']
+        return existing_endpoints
 
     def call_list_endpoints(self, env_name):
         """Return a list of DNS endpoints for an environment."""
@@ -196,10 +204,11 @@ class Artemis(object):
             return False
         env = self.get_environment(env_name)
         env_fqdn = "%s.%s" % (env.get_name(), self.config.get('endpoint_zone'))
+        endpoints = self.__call_get_existing_endpoints(env_name)
 
-        for r in self.endpoint_zone.record_sets:
-            if len(env_fqdn) <= len(r.name) and r.name[-len(env_fqdn):] == env_fqdn:
-                print "Endpoint: %s" % r.name
+        for endpoint_name in endpoints.keys():
+            if env_fqdn in endpoint_name:
+                print "Endpoint: %s" % endpoint_name
 
     def call_get_logs(self, env_name, component_name=None, pod_name=None):
         """Return logs for a pod in a component."""
@@ -255,6 +264,53 @@ class Artemis(object):
         to_update = self.call_deploy_diff(source_env_name, dest_env_name)
         for component in to_update.keys():
             self.call_update_component(dest_env_name, component, to_update[component]['source'])
+
+    def __update_dns_record(self, endpoint, ip_address):
+        """Update DNS record for an endpoint"""
+        self.conn.change_resource_record_sets(
+            HostedZoneId=self.endpoint_zone,
+            ChangeBatch={
+                'Changes': [
+                    {
+                        'Action': 'UPSERT',
+                        'ResourceRecordSet':
+                            {
+                                'Name': endpoint,
+                                'Type': 'A',
+                                'TTL': 60,
+                                'ResourceRecords': [
+                                    {
+                                        'Value': ip_address
+                                    },
+                                ],
+                            }
+                        },
+                    ]
+                }
+            )
+
+    def __delete_dns_record(self, endpoint, ip_address):
+        """Delete DNS record for an endpoint"""
+        self.conn.change_resource_record_sets(
+            HostedZoneId=self.endpoint_zone,
+            ChangeBatch={
+                'Changes': [
+                    {
+                        'Action': 'DELETE',
+                        'ResourceRecordSet': {
+                            'Name': endpoint,
+                            'Type': 'A',
+                            'TTL': 60,
+                            'ResourceRecords': [
+                                {
+                                    'Value': ip_address
+                                },
+                            ],
+                        }
+                    },
+                ]
+            }
+        )
 
     def __get_environment_list(self):
         env_list = []
